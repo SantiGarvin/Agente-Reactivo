@@ -70,7 +70,7 @@ add_library(obj3DLib ${SOURCES_LIB3D})
 target_link_libraries(obj3DLib ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} ${JPEG_LIBRARIES} "-lpthread")
 
 add_library(GLUILib ${SOURCES_GLUI})
-target_link_libraries(GLUILib ${OPENGL_LIBRARIES} ${GLUT_LIBRARY})
+target_link_libraries(GLUILib ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} "-lglut")
 
 add_library(modelosBelkanLib ${SOURCES_MODELOS})
 target_link_libraries(modelosBelkanLib obj3DLib ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} ${OPENMP_LIBRARIES} "-lpthread")
