@@ -7,51 +7,48 @@ Action ComportamientoJugador::think(Sensores sensors)
 {
 	Action action = actIDLE;
 
-	cout << "Posicion: fila " << sensors.posF << " columna " << sensors.posC << " ";
-	switch (sensors.sentido)
-	{
-	case 0:
-		cout << "Norte" << endl;
-		break;
-	case 1:
-		cout << "Noreste" << endl;
-		break;
-	case 2:
-		cout << "Este" << endl;
-		break;
-	case 3:
-		cout << "Sureste" << endl;
-		break;
-	case 4:
-		cout << "Sur " << endl;
-		break;
-	case 5:
-		cout << "Suroeste" << endl;
-		break;
-	case 6:
-		cout << "Oeste" << endl;
-		break;
-	case 7:
-		cout << "Noroeste" << endl;
-		break;
-	}
-	cout << "Terreno: ";
-	for (int i = 0; i < sensors.terreno.size(); i++)
-		cout << sensors.terreno[i];
-	cout << endl;
+	// cout << "Posicion: fila " << sensors.posF << " columna " << sensors.posC << " ";
+	// switch (sensors.sentido)
+	// {
+	// case 0:
+	// 	cout << "Norte" << endl;
+	// 	break;
+	// case 1:
+	// 	cout << "Noreste" << endl;
+	// 	break;
+	// case 2:
+	// 	cout << "Este" << endl;
+	// 	break;
+	// case 3:
+	// 	cout << "Sureste" << endl;
+	// 	break;
+	// case 4:
+	// 	cout << "Sur " << endl;
+	// 	break;
+	// case 5:
+	// 	cout << "Suroeste" << endl;
+	// 	break;
+	// case 6:
+	// 	cout << "Oeste" << endl;
+	// 	break;
+	// case 7:
+	// 	cout << "Noroeste" << endl;
+	// 	break;
+	// }
+	// cout << "Terreno: ";
+	// for (int i = 0; i < sensors.terreno.size(); i++)
+	// 	cout << sensors.terreno[i];
+	// cout << endl;
 
-	cout << "Superficie: ";
-	for (int i = 0; i < sensors.superficie.size(); i++)
-		cout << sensors.superficie[i];
-	cout << endl;
+	// cout << "Superficie: ";
+	// for (int i = 0; i < sensors.superficie.size(); i++)
+	// 	cout << sensors.superficie[i];
+	// cout << endl;
 
-	cout << "Colisión: " << sensors.colision << endl;
-	cout << "Reset: " << sensors.reset << endl;
-	cout << "Vida: " << sensors.vida << endl;
-	cout << endl;
-	cout << "LAST ACTION " << last_action << "ACCION ACTUAL" << action << endl;
-
-	updateCurrentState();
+	// cout << "Colisión: " << sensors.colision << endl;
+	// cout << "Reset: " << sensors.reset << endl;
+	// cout << "Vida: " << sensors.vida << endl << endl;
+	
 	updateState(sensors);
 
 	if (current_state.well_situated)
@@ -93,6 +90,8 @@ void ComportamientoJugador::initMap(vector<vector<unsigned char>> &map, int size
 
 void ComportamientoJugador::updateState(const Sensores &sensors)
 {
+	updateCurrentState();
+
 	// Reinicio de la simulacion
 	if (sensors.reset)
 	{
@@ -114,6 +113,9 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		current_state.col = sensors.posC;
 		current_state.orientation = sensors.sentido;
 		current_state.well_situated = true;
+
+		// Copia del mapa de la simulacion al mapa de la practica
+		updateMapaResultado(sensors);
 	}
 	
 }
@@ -168,6 +170,21 @@ void ComportamientoJugador::updateCurrentState()
 		case actTURN_BR: // giro a la derecha 135 grados
 			current_state.orientation = static_cast<Orientacion>((current_state.orientation + 2) % 8);
 			break;
+		}
+	}
+}
+
+void ComportamientoJugador::updateMapaResultado(const Sensores &sensors){
+	if(current_state.well_situated){
+		int diff_row = current_state.row - sensors.posF;
+		int diff_col = current_state.col - sensors.posC;
+
+		for(int i = 0; i < mapaResultado.size(); i++){
+			for(int j = 0; j < mapaResultado.size(); j++){
+				if(mapaResultado[i][j] == '?'){
+					mapaResultado[i][j] = map[diff_row + i][diff_col + j];
+				}
+			}
 		}
 	}
 }

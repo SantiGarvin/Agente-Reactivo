@@ -52,11 +52,13 @@ private:
 
 	void updateState(const Sensores &sensors);
 	void updateCurrentState();
+	void updateMapaResultado(const Sensores &sensors);
 	
 	void vision(vector<vector<unsigned char>> & mapa, Sensores sensores);
 	int targetInVision(const Sensores &sensors, unsigned char target);
 	
 	Action move(Sensores sensors);
+	void moveToTarget(const Sensores &sensors, unsigned char target);
 
 	int batteryCostForward(unsigned char cell);
 	int batteryCostTurnSL_SR(unsigned char cell);
