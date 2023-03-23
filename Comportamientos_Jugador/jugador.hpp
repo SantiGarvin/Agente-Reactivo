@@ -4,24 +4,65 @@
 #include "comportamientos/comportamiento.hpp"
 using namespace std;
 
-class ComportamientoJugador : public Comportamiento{
+struct State
+{
+	int row;
+	int col;
+	Orientacion orientation;
+	bool well_situated;
+	bool has_bikini;
+	bool has_sneakers;
+};
 
-  public:
-    ComportamientoJugador(unsigned int size) : Comportamiento(size){
-      // Constructor de la clase
-      // Dar el valor inicial a las variables de estado
-    }
+class ComportamientoJugador : public Comportamiento
+{
+public:
+	ComportamientoJugador(unsigned int size) : Comportamiento(size)
+	{
+		current_state.row = current_state.col = 99;
+		current_state.orientation = Orientacion::norte;
+		current_state.well_situated = false;
+		current_state.has_bikini = current_state.has_sneakers = false;
 
-    ComportamientoJugador(const ComportamientoJugador & comport) : Comportamiento(comport){}
-    ~ComportamientoJugador(){}
+		last_action = actIDLE;
 
-    Action think(Sensores sensores);
-    int interact(Action accion, int valor);
+		// Inicializar precipicio mapaResultado
+		initPrecipiceLimit();
+		// Inicializar mapa auxiliar
+		initMap(map, 2*size, '?');
+	}
 
-  private:
-  
-  // Declarar aquí las variables de estado
+	ComportamientoJugador(const ComportamientoJugador &comport) : Comportamiento(comport) {}
+	~ComportamientoJugador() {}
 
+	Action think(Sensores sensors);
+	int interact(Action accion, int valor);
+
+private:
+
+	// ...............................................................
+	State current_state;
+	Action last_action;
+
+	vector<vector<unsigned char>> map;					// Mapa auxiliar
+
+	// ...............................................................
+	void initPrecipiceLimit();
+	void initMap(vector<vector<unsigned char>> &map, int size, unsigned char value);
+
+	void updateState(const Sensores &sensors);
+	void updateCurrentState();
+	
+	void vision(vector<vector<unsigned char>> & mapa, Sensores sensores);
+	int targetInVision(const Sensores &sensors, unsigned char target);
+	
+	Action move(Sensores sensors);
+
+	int batteryCostForward(unsigned char cell);
+	int batteryCostTurnSL_SR(unsigned char cell);
+	int batteryCostTurnBL_BR(unsigned char cell);
+
+	
 };
 
 #endif
