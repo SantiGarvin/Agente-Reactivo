@@ -26,6 +26,8 @@ public:
 
 		last_action = actIDLE;
 
+		target_found = false;
+
 		// Inicializar precipicio mapaResultado
 		initPrecipiceLimit();
 		// Inicializar mapa auxiliar
@@ -43,6 +45,7 @@ private:
 	// ...............................................................
 	State current_state;
 	Action last_action;
+	bool target_found;
 
 	vector<vector<unsigned char>> map;					// Mapa auxiliar
 

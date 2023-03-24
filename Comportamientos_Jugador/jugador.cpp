@@ -60,6 +60,8 @@ Action ComportamientoJugador::think(Sensores sensors)
 		vision(map, sensors);
 	}
 
+
+
 	action = move(sensors);
 
 	last_action = action;
@@ -336,7 +338,7 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 	}
 }
 
-int targetInVision(const Sensores &sensors, unsigned char target)
+int ComportamientoJugador::targetInVision(const Sensores &sensors, unsigned char target)
 {
 	int position = -1;
 
@@ -352,12 +354,15 @@ Action ComportamientoJugador::move(Sensores sensors)
 {
 	Action action = actIDLE;
 
-	if (sensors.terreno[2] == 'A' && !current_state.has_bikini || sensors.terreno[2] == 'B' && !current_state.has_sneakers || sensors.terreno[2] == 'M' || sensors.terreno[2] == 'P')
-		action = actTURN_BR;
-	else
-		action = actFORWARD;
+	unsigned char right_cell = sensors.terreno[2];
+
+	
 
 	return action;
+}
+
+void ComportamientoJugador::moveToTarget(const Sensores &sensors, unsigned char target){
+	
 }
 
 int ComportamientoJugador::batteryCostForward(unsigned char cell)
