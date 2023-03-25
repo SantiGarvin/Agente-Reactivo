@@ -60,10 +60,10 @@ Action ComportamientoJugador::think(Sensores sensors)
 		vision(map, sensors);
 	}
 
-
-
+	// Decide la accion a realizar basado en el estado actual
 	action = move(sensors);
 
+	// Guarda la ultima accion realizada
 	last_action = action;
 
 	return action;
@@ -92,7 +92,7 @@ void ComportamientoJugador::initMap(vector<vector<unsigned char>> &map, int size
 
 void ComportamientoJugador::updateState(const Sensores &sensors)
 {
-	updateCurrentState();
+	updatePositionOrientation();
 
 	// Reinicio de la simulacion
 	if (sensors.reset)
@@ -101,6 +101,7 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		last_action = actIDLE;
 	}
 
+	// Nivel 0
 	if (sensors.nivel == 0)
 	{
 		current_state.well_situated = true;
@@ -122,7 +123,7 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 	
 }
 
-void ComportamientoJugador::updateCurrentState()
+void ComportamientoJugador::updatePositionOrientation()
 {
 	if(last_action != actIDLE){
 		switch (last_action)
@@ -354,9 +355,20 @@ Action ComportamientoJugador::move(Sensores sensors)
 {
 	Action action = actIDLE;
 
-	unsigned char right_cell = sensors.terreno[2];
+	unsigned char left_cell = sensors.terreno[1];
+	unsigned char front_cell = sensors.terreno[2];
+	unsigned char right_cell = sensors.terreno[3];
 
+	updateState(sensors);
 	
+	if(front_cell == 'P' || front_cell == 'M')
+		action = actTURN_BR;
+	else if(batteryCostForward(front_cell) <= batteryCostTurnSL_SR(right_cell))
+		action = actFORWARD;
+	else if(batteryCostTurnSL_SR(left_cell) <= batteryCostTurnSL_SR(right_cell))
+		action = actTURN_SL;
+	else
+		action = actTURN_SR;
 
 	return action;
 }

@@ -28,6 +28,10 @@ public:
 
 		target_found = false;
 
+		move_left = (last_action == actTURN_BL || last_action == actTURN_SL);
+		move_right = (last_action == actTURN_BR || last_action == actTURN_SR);
+		move_forward = last_action == actFORWARD;
+
 		// Inicializar precipicio mapaResultado
 		initPrecipiceLimit();
 		// Inicializar mapa auxiliar
@@ -42,19 +46,26 @@ public:
 
 private:
 
-	// ...............................................................
+	// ...................... VARIABLES .............................
+
 	State current_state;
 	Action last_action;
+
 	bool target_found;
+
+	bool move_left;
+	bool move_right;
+	bool move_forward;
 
 	vector<vector<unsigned char>> map;					// Mapa auxiliar
 
-	// ...............................................................
+	// ...................... FUNCIONES .............................
+
 	void initPrecipiceLimit();
 	void initMap(vector<vector<unsigned char>> &map, int size, unsigned char value);
 
 	void updateState(const Sensores &sensors);
-	void updateCurrentState();
+	void updatePositionOrientation();
 	void updateMapaResultado(const Sensores &sensors);
 	
 	void vision(vector<vector<unsigned char>> & mapa, Sensores sensores);
