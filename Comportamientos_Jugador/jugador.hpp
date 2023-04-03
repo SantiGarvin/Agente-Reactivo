@@ -1,6 +1,8 @@
 #ifndef COMPORTAMIENTOJUGADOR_H
 #define COMPORTAMIENTOJUGADOR_H
 
+#include <cmath>
+
 #include "comportamientos/comportamiento.hpp"
 using namespace std;
 
@@ -34,8 +36,19 @@ public:
 
 		// Inicializar precipicio mapaResultado
 		initPrecipiceLimit();
+
 		// Inicializar mapa auxiliar
-		initMap(map, 2*size, '?');
+		initMap(map, 2*size, (unsigned char)'?');
+
+		// Inicializar mapa visitas
+		initMap(cell_visits, 2*size, (int)0);
+
+		// Inicializar mapa potenciales
+		initMap(potencial_map, 2*size, (double)0.0);
+
+		// Inicializar mapa coste bateria
+		initMap(battery_cost_map, 2*size, (int)0);
+
 	}
 
 	ComportamientoJugador(const ComportamientoJugador &comport) : Comportamiento(comport) {}
@@ -48,6 +61,10 @@ private:
 
 	// ...................... VARIABLES .............................
 
+	const double VISIT_PENALTY_FACTOR = 1.0;
+	const double BATTERY_COST_FACTOR = 1.0;
+	const double UNVISITED_ATTRACTION = 100.0;
+
 	State current_state;
 	Action last_action;
 
@@ -58,16 +75,23 @@ private:
 	bool move_forward;
 
 	vector<vector<unsigned char>> map;					// Mapa auxiliar
+	vector<vector<int>> cell_visits;						// Mapa visitas
+	vector<vector<double>> potencial_map;				// Mapa potenciales
+	vector<vector<int>> battery_cost_map;				// Mapa coste bateria
 
 	// ...................... FUNCIONES .............................
 
 	void initPrecipiceLimit();
-	void initMap(vector<vector<unsigned char>> &map, int size, unsigned char value);
+	
+	template <typename T> void initMap(vector<vector<T>> &map, int size, T value);
+	template <typename T> void fillMap(vector<vector<T>> &map, T value);
 
 	void updateState(const Sensores &sensors);
 	void updatePositionOrientation();
 	void updateMapaResultado(const Sensores &sensors);
 	
+	vector<vector<double>> calculate_potencials(const vector<vector<int>> &map, const vector<vector<int>> visits_cell, const vector<vector<int>> battery_cost);
+
 	void vision(vector<vector<unsigned char>> & mapa, Sensores sensores);
 	int targetInVision(const Sensores &sensors, unsigned char target);
 	

@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
+
+set(OpenGL_GL_PREFERENCE "GLVND")
 
 project(Motor_Grafico_Belkan)
 

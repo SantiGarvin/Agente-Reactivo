@@ -48,7 +48,7 @@ Action ComportamientoJugador::think(Sensores sensors)
 	// cout << "Colisión: " << sensors.colision << endl;
 	// cout << "Reset: " << sensors.reset << endl;
 	// cout << "Vida: " << sensors.vida << endl << endl;
-	
+
 	updateState(sensors);
 
 	if (current_state.well_situated)
@@ -85,9 +85,16 @@ void ComportamientoJugador::initPrecipiceLimit()
 	}
 }
 
-void ComportamientoJugador::initMap(vector<vector<unsigned char>> &map, int size, unsigned char value)
-{
-	map.resize(size, vector<unsigned char>(size, value));
+template <typename T>
+void ComportamientoJugador::initMap(vector<vector<T>>& map, int size, T value){
+	map.resize(size, vector<T>(size, value));
+}
+
+template <typename T>
+void ComportamientoJugador::fillMap(vector<vector<T>>& map, T value){
+	for (int i = 0; i < map.size(); i++)
+		for (int j = 0; j < map[0].size(); j++)
+			map[i][j] = value;
 }
 
 void ComportamientoJugador::updateState(const Sensores &sensors)
@@ -120,12 +127,12 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		// Copia del mapa de la simulacion al mapa de la practica
 		updateMapaResultado(sensors);
 	}
-	
 }
 
 void ComportamientoJugador::updatePositionOrientation()
 {
-	if(last_action != actIDLE){
+	if (last_action != actIDLE)
+	{
 		switch (last_action)
 		{
 		case actFORWARD:
@@ -177,20 +184,56 @@ void ComportamientoJugador::updatePositionOrientation()
 	}
 }
 
-void ComportamientoJugador::updateMapaResultado(const Sensores &sensors){
-	if(current_state.well_situated){
+void ComportamientoJugador::updateMapaResultado(const Sensores &sensors)
+{
+	if (current_state.well_situated)
+	{
 		int diff_row = current_state.row - sensors.posF;
 		int diff_col = current_state.col - sensors.posC;
 
-		for(int i = 0; i < mapaResultado.size(); i++){
-			for(int j = 0; j < mapaResultado.size(); j++){
-				if(mapaResultado[i][j] == '?'){
+		for (int i = 0; i < mapaResultado.size(); i++)
+		{
+			for (int j = 0; j < mapaResultado.size(); j++)
+			{
+				if (mapaResultado[i][j] == '?')
+				{
 					mapaResultado[i][j] = map[diff_row + i][diff_col + j];
 				}
 			}
 		}
 	}
 }
+
+// vector<vector<double>> ComportamientoJugador::calculate_potencials(const vector<vector<int>> &map, const vector<vector<int>> visits_cell, const vector<vector<int>> battery_cost)
+// {
+// 	int rows = map.size();
+// 	int cols = map[0].size();
+
+// 	vector<vector<double>> potentials(rows, vector<double>(cols, 0.0));
+
+// 	for (int row = 0; row < rows; ++row)
+// 	{
+// 		for (int col = 0; col < cols; ++col)
+// 		{
+// 			double visit_penalty = log(1 + visits[row][col]) * VISIT_PENALTY_FACTOR;
+// 			double battery_cost_penalty = battery_costs[row][col] * BATTERY_COST_FACTOR;
+// 			double attraction;
+
+// 			if (visits[row][col] > 0)
+// 			{
+// 				attraction = -visit_penalty - battery_cost_penalty;
+// 			}
+// 			else
+// 			{
+// 				attraction = UNVISITED_ATTRACTION - battery_cost_penalty;
+// 			}
+
+// 			potentials[row][col] = attraction;
+// 		}
+// 	}
+
+// 	return potentials;
+// }
 
 void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores sensores)
 {
@@ -360,12 +403,12 @@ Action ComportamientoJugador::move(Sensores sensors)
 	unsigned char right_cell = sensors.terreno[3];
 
 	updateState(sensors);
-	
-	if(front_cell == 'P' || front_cell == 'M')
+
+	if (front_cell == 'P' || front_cell == 'M')
 		action = actTURN_BR;
-	else if(batteryCostForward(front_cell) <= batteryCostTurnSL_SR(right_cell))
+	else if (batteryCostForward(front_cell) <= batteryCostTurnSL_SR(right_cell))
 		action = actFORWARD;
-	else if(batteryCostTurnSL_SR(left_cell) <= batteryCostTurnSL_SR(right_cell))
+	else if (batteryCostTurnSL_SR(left_cell) <= batteryCostTurnSL_SR(right_cell))
 		action = actTURN_SL;
 	else
 		action = actTURN_SR;
@@ -373,8 +416,8 @@ Action ComportamientoJugador::move(Sensores sensors)
 	return action;
 }
 
-void ComportamientoJugador::moveToTarget(const Sensores &sensors, unsigned char target){
-	
+void ComportamientoJugador::moveToTarget(const Sensores &sensors, unsigned char target)
+{
 }
 
 int ComportamientoJugador::batteryCostForward(unsigned char cell)

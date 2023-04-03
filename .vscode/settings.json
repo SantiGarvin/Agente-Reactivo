@@ -2,5 +2,6 @@
     "files.associations": {
         "iosfwd": "cpp",
         "ostream": "cpp"
-    }
+	},
+	"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }
