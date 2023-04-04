@@ -1,7 +1,9 @@
 #ifndef COMPORTAMIENTOJUGADOR_H
 #define COMPORTAMIENTOJUGADOR_H
 
+#include <vector>
 #include <cmath>
+#include <limits>
 
 #include "comportamientos/comportamiento.hpp"
 using namespace std;
@@ -16,6 +18,13 @@ struct State
 	bool has_sneakers;
 };
 
+struct BatteryCost
+{
+	int forward;
+	int turnSL_SR;
+	int turnBL_BR;
+};
+
 class ComportamientoJugador : public Comportamiento
 {
 public:
@@ -27,28 +36,15 @@ public:
 		current_state.has_bikini = current_state.has_sneakers = false;
 
 		last_action = actIDLE;
-
 		target_found = false;
-
-		move_left = (last_action == actTURN_BL || last_action == actTURN_SL);
-		move_right = (last_action == actTURN_BR || last_action == actTURN_SR);
-		move_forward = last_action == actFORWARD;
+		move_left = move_right = move_forward = false;
+		reset_counter = 0;
 
 		// Inicializar precipicio mapaResultado
 		initPrecipiceLimit();
 
-		// Inicializar mapa auxiliar
-		initMap(map, 2*size, (unsigned char)'?');
-
-		// Inicializar mapa visitas
-		initMap(cell_visits, 2*size, (int)0);
-
-		// Inicializar mapa potenciales
-		initMap(potencial_map, 2*size, (double)0.0);
-
-		// Inicializar mapa coste bateria
-		initMap(battery_cost_map, 2*size, (int)0);
-
+		// Inicializar mapas auxiliares
+		initMaps(2*size);
 	}
 
 	ComportamientoJugador(const ComportamientoJugador &comport) : Comportamiento(comport) {}
@@ -58,15 +54,28 @@ public:
 	int interact(Action accion, int valor);
 
 private:
-
-	// ...................... VARIABLES .............................
+	// ...................... CONSTANTES .............................
 
 	const double VISIT_PENALTY_FACTOR = 1.0;
 	const double BATTERY_COST_FACTOR = 1.0;
 	const double UNVISITED_ATTRACTION = 100.0;
 
+	const double TARGET_ATTRACTION = 100000.0;
+	const double UNKNOWN_CELL_ATTRACTION = 0;
+	
+	const double WALL_PRECIPICE_PENALTY = -100000.0;
+
+	const int MAX_INT = numeric_limits<int>::max();
+	const int MIN_INT = numeric_limits<int>::min();
+
+	const int MAX_SIZE_MAP = 100;
+
+	// ...................... VARIABLES .............................
+
 	State current_state;
 	Action last_action;
+
+	int reset_counter;
 
 	bool target_found;
 
@@ -74,27 +83,65 @@ private:
 	bool move_right;
 	bool move_forward;
 
-	vector<vector<unsigned char>> map;					// Mapa auxiliar
-	vector<vector<int>> cell_visits;						// Mapa visitas
-	vector<vector<double>> potencial_map;				// Mapa potenciales
-	vector<vector<int>> battery_cost_map;				// Mapa coste bateria
+	vector<vector<unsigned char>> map;	  			// Mapa auxiliar
+	vector<vector<int>> cell_visit_map;				// Mapa visitas
+	vector<vector<BatteryCost>> battery_cost_map; 	// Mapa coste bateria
+	vector<vector<double>> potencial_map; 			// Mapa potenciales
+
+	// ................. FUNCIONES PLANTILLA .........................
+
+	template <typename T>
+	void initMap(vector<vector<T>> &map, int size, T value)
+	{
+		map.resize(size, vector<T>(size, value));
+	}
+
+	template <typename T>
+	void fillMap(vector<vector<T>> &map, T value)
+	{
+		for (int i = 0; i < map.size(); i++)
+			for (int j = 0; j < map[0].size(); j++)
+				map[i][j] = value;
+	}
+
+	template <typename T>
+	void recenterMap(vector<vector<T>> &original_map, int size, const int row_offset, const int col_offset)
+	{
+		vector<vector<T>> new_map(size, vector<T>(size));
+
+		for (int i = 0; i < size; ++i)
+		{
+			for (int j = 0; j < size; ++j)
+			{
+				int new_row = i + row_offset;
+				int new_col = j + col_offset;
+
+				if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
+					new_map[new_row][new_col] = original_map[i][j];
+			}
+		}
+
+		original_map = new_map;
+	}
 
 	// ...................... FUNCIONES .............................
 
 	void initPrecipiceLimit();
-	
-	template <typename T> void initMap(vector<vector<T>> &map, int size, T value);
-	template <typename T> void fillMap(vector<vector<T>> &map, T value);
+	void initMaps(int size);
 
 	void updateState(const Sensores &sensors);
 	void updatePositionOrientation();
-	void updateMapaResultado(const Sensores &sensors);
-	
-	vector<vector<double>> calculate_potencials(const vector<vector<int>> &map, const vector<vector<int>> visits_cell, const vector<vector<int>> battery_cost);
+	// void updateMapaResultado(const Sensores &sensors);
 
-	void vision(vector<vector<unsigned char>> & mapa, Sensores sensores);
+	void recenterMaps(int size, int row_offset, int col_offset);
+
+	BatteryCost batteryCost(unsigned char cell);
+	int bestBatteryCost(BatteryCost battery_cost);
+	vector<vector<double>> potencials(const vector<vector<int>> &map, const vector<vector<int>> visits_cell, const vector<vector<BatteryCost>> battery_cost);
+
+	void vision(vector<vector<unsigned char>> &mapa, Sensores sensores);
 	int targetInVision(const Sensores &sensors, unsigned char target);
-	
+
 	Action move(Sensores sensors);
 	void moveToTarget(const Sensores &sensors, unsigned char target);
 
@@ -102,7 +149,6 @@ private:
 	int batteryCostTurnSL_SR(unsigned char cell);
 	int batteryCostTurnBL_BR(unsigned char cell);
 
-	
 };
 
 #endif
