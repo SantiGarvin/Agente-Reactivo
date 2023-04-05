@@ -25,6 +25,17 @@ struct BatteryCost
 	int turnBL_BR;
 };
 
+struct MapCell
+{
+	pair<int, int> position;
+	unsigned char terrain_type;
+	unsigned char entity_type;
+
+	int times_visited;
+	BatteryCost battery_cost;
+	double potential;
+};
+
 class ComportamientoJugador : public Comportamiento
 {
 public:
@@ -43,8 +54,10 @@ public:
 		// Inicializar precipicio mapaResultado
 		initPrecipiceLimit();
 
+		map.resize(2 * MAX_SIZE_MAP, vector<MapCell>(2 * MAX_SIZE_MAP));
+
 		// Inicializar mapas auxiliares
-		initMaps(2*size);
+		initMap(2 * MAX_SIZE_MAP);
 	}
 
 	ComportamientoJugador(const ComportamientoJugador &comport) : Comportamiento(comport) {}
@@ -62,7 +75,7 @@ private:
 
 	const double TARGET_ATTRACTION = 100000.0;
 	const double UNKNOWN_CELL_ATTRACTION = 0;
-	
+
 	const double WALL_PRECIPICE_PENALTY = -100000.0;
 
 	const int MAX_INT = numeric_limits<int>::max();
@@ -83,26 +96,13 @@ private:
 	bool move_right;
 	bool move_forward;
 
-	vector<vector<unsigned char>> map;	  			// Mapa auxiliar
-	vector<vector<int>> cell_visit_map;				// Mapa visitas
-	vector<vector<BatteryCost>> battery_cost_map; 	// Mapa coste bateria
-	vector<vector<double>> potencial_map; 			// Mapa potenciales
+	vector<vector<MapCell>> map; // Mapa auxiliar
+	// vector<vector<int>> cell_visit_map;				// Mapa visitas
+	// vector<vector<BatteryCost>> battery_cost_map; 	// Mapa coste bateria
+	// vector<vector<double>> potential_map; 			// Mapa potenciales
 
+	vector<double> potential;
 	// ................. FUNCIONES PLANTILLA .........................
-
-	template <typename T>
-	void initMap(vector<vector<T>> &map, int size, T value)
-	{
-		map.resize(size, vector<T>(size, value));
-	}
-
-	template <typename T>
-	void fillMap(vector<vector<T>> &map, T value)
-	{
-		for (int i = 0; i < map.size(); i++)
-			for (int j = 0; j < map[0].size(); j++)
-				map[i][j] = value;
-	}
 
 	template <typename T>
 	void recenterMap(vector<vector<T>> &original_map, int size, const int row_offset, const int col_offset)
@@ -127,19 +127,18 @@ private:
 	// ...................... FUNCIONES .............................
 
 	void initPrecipiceLimit();
-	void initMaps(int size);
+	void initMap(int size);
 
 	void updateState(const Sensores &sensors);
 	void updatePositionOrientation();
 	// void updateMapaResultado(const Sensores &sensors);
 
-	void recenterMaps(int size, int row_offset, int col_offset);
-
 	BatteryCost batteryCost(unsigned char cell);
 	int bestBatteryCost(BatteryCost battery_cost);
-	vector<vector<double>> potencials(const vector<vector<int>> &map, const vector<vector<int>> visits_cell, const vector<vector<BatteryCost>> battery_cost);
 
-	void vision(vector<vector<unsigned char>> &mapa, Sensores sensores);
+	vector<vector<double>> potentials(const vector<vector<MapCell>> &_map);
+
+	vector<MapCell> updateMapWithVision(vector<vector<MapCell>> &mapa, Sensores sensores, bool update_mapaResultado = false);
 	int targetInVision(const Sensores &sensors, unsigned char target);
 
 	Action move(Sensores sensors);
@@ -148,7 +147,6 @@ private:
 	int batteryCostForward(unsigned char cell);
 	int batteryCostTurnSL_SR(unsigned char cell);
 	int batteryCostTurnBL_BR(unsigned char cell);
-
 };
 
 #endif

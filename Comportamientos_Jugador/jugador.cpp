@@ -49,12 +49,10 @@ Action ComportamientoJugador::think(Sensores sensors)
 	// cout << "Reset: " << sensors.reset << endl;
 	// cout << "Vida: " << sensors.vida << endl << endl;
 
-	updateState(sensors);
-
 	if (current_state.well_situated)
-		vision(mapaResultado, sensors);
+		updateMapWithVision(map, sensors, true);
 	else
-		vision(map, sensors);
+		updateMapWithVision(map, sensors);
 
 	// Decide la accion a realizar basado en el estado actual
 	action = move(sensors);
@@ -85,18 +83,20 @@ void ComportamientoJugador::initPrecipiceLimit()
 	}
 }
 
-void ComportamientoJugador::initMaps(int size){
-		// Inicializar mapa auxiliar
-		initMap(map, size, (unsigned char)'?');
-
-		// Inicializar mapa visitas
-		initMap(cell_visit_map, size, (int)0);
-
-		// Inicializar mapa coste bateria
-		initMap(battery_cost_map, size, (BatteryCost){0, 0, 0});
-
-		// Inicializar mapa potenciales
-		initMap(potencial_map, size, (double)0.0);
+void ComportamientoJugador::initMap(int size)
+{
+	for (int i = 0; i < 2 * MAX_SIZE_MAP; ++i)
+	{
+		for (int j = 0; j < 2 * MAX_SIZE_MAP; ++j)
+		{
+			map[i][j].position = make_pair(i, j);
+			map[i][j].terrain_type = '?';
+			map[i][j].entity_type = '?';
+			map[i][j].times_visited = 0;
+			map[i][j].battery_cost = {0, 0, 0};
+			map[i][j].potential = 0.0;
+		}
+	}
 }
 
 void ComportamientoJugador::updateState(const Sensores &sensors)
@@ -113,7 +113,7 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		reset_counter++;
 		last_action = actIDLE;
 
-		initMaps(2*MAX_SIZE_MAP);
+		initMap(2 * MAX_SIZE_MAP);
 	}
 
 	// Nivel 0
@@ -124,7 +124,7 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		current_state.col = sensors.posC;
 		current_state.orientation = sensors.sentido;
 
-		initMaps(mapaResultado.size());
+		initMap(mapaResultado.size());
 	}
 
 	// Si no esta bien situado y cae en una casilla de posicionamiento, se actualiza la posicion
@@ -139,13 +139,13 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		current_state.well_situated = true;
 
 		// Copia del mapa de la simulacion al mapa de la practica
-		recenterMaps(mapaResultado.size(), row_offset, col_offset);
+		recenterMap(map, mapaResultado.size(), row_offset, col_offset);
 	}
 
-	if(sensors.terreno[0] == 'K')
+	if (sensors.terreno[0] == 'K')
 		current_state.has_bikini = true;
-	
-	if(sensors.terreno[0] == 'D')
+
+	if (sensors.terreno[0] == 'D')
 		current_state.has_sneakers = true;
 }
 
@@ -224,14 +224,6 @@ void ComportamientoJugador::updatePositionOrientation()
 // 	}
 // }
 
-void ComportamientoJugador::recenterMaps(int size, int row_offset, int col_offset)
-{
-	recenterMap(map, size, row_offset, col_offset);
-	recenterMap(cell_visit_map, size, row_offset, col_offset);
-	recenterMap(battery_cost_map, size, row_offset, col_offset);
-	recenterMap(potencial_map, size, row_offset, col_offset);
-}
-
 BatteryCost ComportamientoJugador::batteryCost(unsigned char cell)
 {
 	BatteryCost battery_cost;
@@ -239,6 +231,8 @@ BatteryCost ComportamientoJugador::batteryCost(unsigned char cell)
 	battery_cost.forward = batteryCostForward(cell);
 	battery_cost.turnSL_SR = batteryCostTurnSL_SR(cell);
 	battery_cost.turnBL_BR = batteryCostTurnBL_BR(cell);
+
+	return battery_cost;
 }
 
 int ComportamientoJugador::bestBatteryCost(BatteryCost battery_cost)
@@ -246,10 +240,10 @@ int ComportamientoJugador::bestBatteryCost(BatteryCost battery_cost)
 	return min(min(battery_cost.forward, battery_cost.turnSL_SR), battery_cost.turnBL_BR);
 }
 
-vector<vector<double>> ComportamientoJugador::potencials(const vector<vector<int>> &map, const vector<vector<int>> cell_visit, const vector<vector<BatteryCost>> battery_cost)
+vector<vector<double>> ComportamientoJugador::potentials(const vector<vector<MapCell>> &_map)
 {
-	int rows = map.size();
-	int cols = map[0].size();
+	int rows = _map.size();
+	int cols = _map[0].size();
 
 	vector<vector<double>> potentials(rows, vector<double>(cols, 0.0));
 
@@ -258,18 +252,18 @@ vector<vector<double>> ComportamientoJugador::potencials(const vector<vector<int
 	{
 		for (int col = 0; col < cols; ++col)
 		{
-			if (map[row][col] == 'M' || map[row][col] == 'P')
+			if (_map[row][col].terrain_type == 'M' || _map[row][col].terrain_type == 'P')
 				attraction = WALL_PRECIPICE_PENALTY;
-			else if((map[row][col] == 'K' && !current_state.has_bikini) || 
-					(map[row][col] == 'D' && !current_state.has_sneakers))
+			else if ((_map[row][col].terrain_type == 'K' && !current_state.has_bikini) || (_map[row][col].terrain_type == 'D' && !current_state.has_sneakers))
 				attraction = TARGET_ATTRACTION;
-			else if(map[row][col] == '?')
+			else if (_map[row][col].terrain_type == '?')
 				attraction = UNKNOWN_CELL_ATTRACTION;
-			else{
-				double visit_penalty = log(1 + cell_visit[row][col]) * VISIT_PENALTY_FACTOR;
-				double battery_cost_penalty = bestBatteryCost(battery_cost[row][col]) * BATTERY_COST_FACTOR;
+			else
+			{
+				double visit_penalty = log(1 + _map[row][col].times_visited) * VISIT_PENALTY_FACTOR;
+				double battery_cost_penalty = bestBatteryCost(_map[row][col].battery_cost) * BATTERY_COST_FACTOR;
 
-				if (cell_visit[row][col] > 0)
+				if (_map[row][col].times_visited > 0)
 					attraction = -visit_penalty - battery_cost_penalty;
 				else
 					attraction = UNVISITED_ATTRACTION - battery_cost_penalty;
@@ -281,20 +275,31 @@ vector<vector<double>> ComportamientoJugador::potencials(const vector<vector<int
 	return potentials;
 }
 
-void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores sensores)
+vector<MapCell> ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, Sensores sensores, bool update_mapaResultado)
 {
-	mapa[current_state.row][current_state.col] = sensores.terreno[0];
+	vector<MapCell> cells;
 
-	BatteryCost battery_cost = batteryCost(sensores.terreno[0]);
+	int row = current_state.row;
+	int col = current_state.col;
+	int index = 0;
+
+	// Actualiza el mapa de bateria
+	BatteryCost battery_cost = batteryCost(sensores.terreno[index]);
+
+	// Actualiza el mapa de terreno
+	_map[row][col].terrain_type = sensores.terreno[index];
+	if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
 
 	// Actualiza el mapa de coste de bateria
-	battery_cost_map[current_state.row][current_state.col] = battery_cost;
+	_map[row][col].battery_cost = battery_cost;
 
 	// Actualiza el mapa de visitas
-	cell_visit_map[current_state.row][current_state.col]++;
+	_map[row][col].times_visited++;
+
+	// Aniade la celda actual a la lista de celdas
+	cells.push_back(_map[row][col]);
 
 	const int DIM = 4; // dimension de la vision
-	int index = 0;
 	switch (sensores.sentido)
 	{
 	case 0: // vision Norte
@@ -307,8 +312,11 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 
 				index++;
 
-				mapa[row][col] = sensores.terreno[index];
-				battery_cost_map[row][col] = batteryCost(sensores.terreno[index]);
+				if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
+
+				_map[row][col].terrain_type = sensores.terreno[index];
+				_map[row][col].battery_cost = batteryCost(sensores.terreno[index]);
+				_map[row][col].potential = potential;
 			}
 		}
 		break;
@@ -332,8 +340,10 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 				}
 				index++;
 
-				mapa[row][col] = sensores.terreno[index];
-				battery_cost_map[row][col] = batteryCost(sensores.terreno[index]);
+				if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
+
+				_map[row][col].terrain_type = sensores.terreno[index];
+				_map[row][col].battery_cost = batteryCost(sensores.terreno[index]);
 			}
 		}
 		break;
@@ -347,8 +357,10 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 
 				index++;
 
-				mapa[row][col] = sensores.terreno[index];
-				battery_cost_map[row][col] = batteryCost(sensores.terreno[index]);
+				if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
+
+				_map[row][col].terrain_type = sensores.terreno[index];
+				_map[row][col].battery_cost = batteryCost(sensores.terreno[index]);
 			}
 		}
 		break;
@@ -372,8 +384,10 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 				}
 				index++;
 
-				mapa[row][col] = sensores.terreno[index];
-				battery_cost_map[row][col] = batteryCost(sensores.terreno[index]);
+				if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
+
+				_map[row][col].terrain_type = sensores.terreno[index];
+				_map[row][col].battery_cost = batteryCost(sensores.terreno[index]);
 			}
 		}
 		break;
@@ -387,8 +401,10 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 
 				index++;
 
-				mapa[row][col] = sensores.terreno[index];
-				battery_cost_map[row][col] = batteryCost(sensores.terreno[index]);
+				if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
+
+				_map[row][col].terrain_type = sensores.terreno[index];
+				_map[row][col].battery_cost = batteryCost(sensores.terreno[index]);
 			}
 		}
 		break;
@@ -412,8 +428,10 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 				}
 				index++;
 
-				mapa[row][col] = sensores.terreno[index];
-				battery_cost_map[row][col] = batteryCost(sensores.terreno[index]);
+				if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
+
+				_map[row][col].terrain_type = sensores.terreno[index];
+				_map[row][col].battery_cost = batteryCost(sensores.terreno[index]);
 			}
 		}
 		break;
@@ -427,8 +445,10 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 
 				index++;
 
-				mapa[row][col] = sensores.terreno[index];
-				battery_cost_map[row][col] = batteryCost(sensores.terreno[index]);
+				if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
+
+				_map[row][col].terrain_type = sensores.terreno[index];
+				_map[row][col].battery_cost = batteryCost(sensores.terreno[index]);
 			}
 		}
 		break;
@@ -452,8 +472,10 @@ void ComportamientoJugador::vision(vector<vector<unsigned char>> &mapa, Sensores
 				}
 				index++;
 
-				mapa[row][col] = sensores.terreno[index];
-				battery_cost_map[row][col] = batteryCost(sensores.terreno[index]);
+				if(update_mapaResultado) mapaResultado[row][col] = sensores.terreno[index];
+
+				_map[row][col].terrain_type = sensores.terreno[index];
+				_map[row][col].battery_cost = batteryCost(sensores.terreno[index]);
 			}
 		}
 		break;
@@ -480,7 +502,14 @@ Action ComportamientoJugador::move(Sensores sensors)
 
 	updateState(sensors);
 
-	
+	// if(front_cell == 'P' || front_cell == 'M')
+	// 	action = actTURN_BR;
+	// else if(batteryCostForward(front_cell) <= batteryCostTurnSL_SR(right_cell))
+	// 	action = actFORWARD;
+	// else if(batteryCostTurnSL_SR(left_cell) <= batteryCostTurnSL_SR(right_cell))
+	// 	action = actTURN_SL;
+	// else
+	// 	action = actTURN_SR;
 
 	return action;
 }
