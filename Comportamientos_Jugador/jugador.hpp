@@ -47,16 +47,16 @@ public:
 		current_state.has_bikini = current_state.has_sneakers = false;
 
 		last_action = actIDLE;
-		target_found = false;
-		move_left = move_right = move_forward = false;
 		reset_counter = 0;
+		loop_counter = 0;
 
 		// Inicializar precipicio mapaResultado
 		initPrecipiceLimit();
 
+		// Reservar memoria para mapa auxiliar
 		map.resize(2 * MAX_SIZE_MAP, vector<MapCell>(2 * MAX_SIZE_MAP));
 
-		// Inicializar mapas auxiliares
+		// Inicializar mapa auxiliar
 		initMap(2 * MAX_SIZE_MAP);
 	}
 
@@ -69,19 +69,20 @@ public:
 private:
 	// ...................... CONSTANTES .............................
 
-	const double VISIT_PENALTY_FACTOR = 1.0;
-	const double BATTERY_COST_FACTOR = 1.0;
-	const double UNVISITED_ATTRACTION = 100.0;
-
-	const double TARGET_ATTRACTION = 100000.0;
-	const double UNKNOWN_CELL_ATTRACTION = 0;
-
-	const double WALL_PRECIPICE_PENALTY = -100000.0;
-
-	const int MAX_INT = numeric_limits<int>::max();
-	const int MIN_INT = numeric_limits<int>::min();
-
 	const int MAX_SIZE_MAP = 100;
+
+	// ATRACCION
+	const double ATTRACTION_UNVISITED_CELL = 10e3;
+	const double ATTRACTION_UNKNOWN_CELL = 100;
+	const double ATTRACTION_TARGET_CELL = 10e4;
+
+	// REPULSION
+	const double PENALTY_WALL_PRECIPICE = -10e5;
+
+	const double PENALTY_VISIT_FACTOR = 100.0;
+	const double PENALTY_BATTERY_COST_FACTOR = 1.0;
+
+	const int LOOP_DETECTION_THRESHOLD = 5;
 
 	// ...................... VARIABLES .............................
 
@@ -89,40 +90,19 @@ private:
 	Action last_action;
 
 	int reset_counter;
-
-	bool target_found;
+	int loop_counter;
 
 	bool move_left;
 	bool move_right;
 	bool move_forward;
 
+	// ...................... MAPA .............................
+
 	vector<vector<MapCell>> map; // Mapa auxiliar
-	// vector<vector<int>> cell_visit_map;				// Mapa visitas
-	// vector<vector<BatteryCost>> battery_cost_map; 	// Mapa coste bateria
-	// vector<vector<double>> potential_map; 			// Mapa potenciales
 
-	vector<double> potential;
-	// ................. FUNCIONES PLANTILLA .........................
-
-	template <typename T>
-	void recenterMap(vector<vector<T>> &original_map, int size, const int row_offset, const int col_offset)
-	{
-		vector<vector<T>> new_map(size, vector<T>(size));
-
-		for (int i = 0; i < size; ++i)
-		{
-			for (int j = 0; j < size; ++j)
-			{
-				int new_row = i + row_offset;
-				int new_col = j + col_offset;
-
-				if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
-					new_map[new_row][new_col] = original_map[i][j];
-			}
-		}
-
-		original_map = new_map;
-	}
+	vector<MapCell> vision;
+	vector<vector<MapCell>> local_area;
+	vector<pair<int, int>> position_history;
 
 	// ...................... FUNCIONES .............................
 
@@ -131,22 +111,28 @@ private:
 
 	void updateState(const Sensores &sensors);
 	void updatePositionOrientation();
-	// void updateMapaResultado(const Sensores &sensors);
 
-	BatteryCost batteryCost(unsigned char cell);
-	int bestBatteryCost(BatteryCost battery_cost);
-
-	vector<vector<double>> potentials(const vector<vector<MapCell>> &_map);
-
-	vector<MapCell> updateMapWithVision(vector<vector<MapCell>> &mapa, Sensores sensores, bool update_mapaResultado = false);
-	int targetInVision(const Sensores &sensors, unsigned char target);
-
-	Action move(Sensores sensors);
-	void moveToTarget(const Sensores &sensors, unsigned char target);
+	void updateTerrain(MapCell &cell, unsigned char terrain_type = '?');
 
 	int batteryCostForward(unsigned char cell);
 	int batteryCostTurnSL_SR(unsigned char cell);
 	int batteryCostTurnBL_BR(unsigned char cell);
+
+	int worstBatteryCost(BatteryCost battery_cost);
+
+	void updateBatteryCost(MapCell &cell);
+	void updatePotential(MapCell &cell);
+
+	void updateMapWithVision(vector<vector<MapCell>> &mapa, Sensores sensores, bool update_mapaResultado = false);
+	void updateMap();
+	void recenterMap(vector<vector<MapCell>> &original_map, int size, const int row_offset, const int col_offset);
+
+	vector<vector<MapCell>> getLocalArea(int size);
+
+	void updatePositionHistory();
+	bool isLooping();
+
+	Action move(Sensores sensors);
 };
 
 #endif
