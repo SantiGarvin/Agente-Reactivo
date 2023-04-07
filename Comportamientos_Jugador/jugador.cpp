@@ -62,6 +62,8 @@ Action ComportamientoJugador::think(Sensores sensors)
 	// Guarda la ultima accion realizada
 	last_action = action;
 
+	updatePositionOrientation();
+
 	// move_left = (last_action == actTURN_BL || last_action == actTURN_SL);
 	// move_right = (last_action == actTURN_BR || last_action == actTURN_SR);
 	// move_forward = last_action == actFORWARD;
@@ -96,15 +98,13 @@ void ComportamientoJugador::initMap(int size)
 			map[i][j].entity_type = '?';
 			map[i][j].times_visited = 0;
 			map[i][j].battery_cost = {0, 0, 0};
-			map[i][j].potential = 0.0;
+			map[i][j].potential = ATTRACTION_UNVISITED_CELL;
 		}
 	}
 }
 
 void ComportamientoJugador::updateState(const Sensores &sensors)
 {
-	updatePositionOrientation();
-
 	// Reinicio de la simulacion
 	if (sensors.reset)
 	{
@@ -125,9 +125,9 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 	// Nivel 0
 	if (sensors.nivel == 0)
 	{
-		current_state.well_situated = true;
 		current_state.row = sensors.posF;
 		current_state.col = sensors.posC;
+		current_state.well_situated = true;
 		current_state.orientation = sensors.sentido;
 	}
 
@@ -139,8 +139,8 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 
 		current_state.row = sensors.posF;
 		current_state.col = sensors.posC;
-		current_state.orientation = sensors.sentido;
 		current_state.well_situated = true;
+		current_state.orientation = sensors.sentido;
 
 		// Copia del mapa de la simulacion al mapa de la practica
 		recenterMap(map, mapaResultado.size(), row_offset, col_offset);
@@ -235,12 +235,9 @@ void ComportamientoJugador::updateTerrain(MapCell &cell, unsigned char terrain_t
 
 void ComportamientoJugador::updateBatteryCost(MapCell &cell)
 {
-	if (cell.terrain_type != '?')
-	{
-		cell.battery_cost.forward = batteryCostForward(cell.terrain_type);
-		cell.battery_cost.turnSL_SR = batteryCostTurnSL_SR(cell.terrain_type);
-		cell.battery_cost.turnBL_BR = batteryCostTurnBL_BR(cell.terrain_type);
-	}
+	cell.battery_cost.forward = batteryCostForward(cell.terrain_type);
+	cell.battery_cost.turnSL_SR = batteryCostTurnSL_SR(cell.terrain_type);
+	cell.battery_cost.turnBL_BR = batteryCostTurnBL_BR(cell.terrain_type);
 }
 
 int ComportamientoJugador::worstBatteryCost(BatteryCost battery_cost)
@@ -252,9 +249,7 @@ void ComportamientoJugador::updatePotential(MapCell &cell)
 {
 	double attraction = 0;
 
-	if (cell.terrain_type == '?')
-		attraction = ATTRACTION_UNKNOWN_CELL;
-	else if (cell.terrain_type == 'M' || cell.terrain_type == 'P')
+	if (cell.terrain_type == 'M' || cell.terrain_type == 'P')
 		attraction = PENALTY_WALL_PRECIPICE;
 	else if ((cell.terrain_type == 'K' && !current_state.has_bikini) || (cell.terrain_type == 'D' && !current_state.has_sneakers))
 		attraction = ATTRACTION_TARGET_CELL;
@@ -264,43 +259,36 @@ void ComportamientoJugador::updatePotential(MapCell &cell)
 		double battery_cost_penalty = worstBatteryCost(cell.battery_cost) * PENALTY_BATTERY_COST_FACTOR;
 
 		if (cell.times_visited > 0)
-			attraction = -visit_penalty - battery_cost_penalty;
+			attraction -= visit_penalty;
 		else
-			attraction = ATTRACTION_UNVISITED_CELL - battery_cost_penalty;
+			attraction += ATTRACTION_UNVISITED_CELL;
+	
+		attraction -= battery_cost_penalty;
 	}
-	cell.potential = attraction;
+	cell.potential = round(attraction);
 }
 
 Action ComportamientoJugador::move(Sensores sensors)
 {
 	Action action = actIDLE;
 
+	double current_potential = vision[0].potential;
 	double left_potential = vision[1].potential;
 	double front_potential = vision[2].potential;
 	double right_potential = vision[3].potential;
 
-	updatePositionHistory();
-
-	if (isLooping())
-	{
-		action = actTURN_BL;
-	}
-	else
-	{
+	if(front_potential > PENALTY_WALL_PRECIPICE){
 		if (front_potential >= left_potential && front_potential >= right_potential)
-		{
-			if (front_potential > 0)
-				action = actFORWARD;
-			else
-				action = actTURN_BL;
-		}
-		else if (left_potential >= right_potential)
-			action = actTURN_SL;
+			action = actFORWARD;
 		else if (right_potential > left_potential)
+			action = actTURN_SL;
+		else if (left_potential > right_potential)
 			action = actTURN_SR;
 		else
 			action = actTURN_BL;
-	}
+	} else 
+		action = actTURN_BR;
+	
 	return action;
 }
 
@@ -311,6 +299,8 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 	int row = current_state.row;
 	int col = current_state.col;
 	int index = 0;
+
+	updateMap();
 
 	// Actualiza el mapa de terreno
 	updateTerrain(_map[row][col], sensores.terreno[index]);
@@ -521,10 +511,24 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 		break;
 	}
 
-	updateMap();
 
 	// Obtenemos el area local del agente de dimension 7x7
-	local_area = getLocalArea(3);
+	local_area = getLocalArea(2);
+
+////////////////////////////////////////////////////////////////////////7
+
+	cout << flush;
+
+	for(int i=0; i < local_area.size(); i++){
+		cout << endl << endl;
+		for(int j=0; j < local_area[i].size(); j++){			
+			cout << "[" << local_area[i][j].terrain_type << "," << local_area[i][j].potential << "]        ";
+		}
+	}
+	cout << endl << endl << endl;
+	cout << flush;
+
+//////////////////////////////////////////////////////////////////7
 
 	// Actualizar el vector de celdas del campo de vision
 	vision = cells;
@@ -536,9 +540,7 @@ void ComportamientoJugador::updateMap()
 	{
 		for (int j = 0; j < map[i].size(); ++j)
 		{
-			if (map[i][j].terrain_type != '?')
-				updateBatteryCost(map[i][j]);
-
+			updateBatteryCost(map[i][j]);
 			updatePotential(map[i][j]);
 		}
 	}
@@ -591,7 +593,7 @@ vector<vector<MapCell>> ComportamientoJugador::getLocalArea(int size)
 
 				// Verificar que las coordenadas estén dentro del mapa
 				if (x >= 0 && x < 2*MAX_SIZE_MAP && y >= 0 && y < 2*MAX_SIZE_MAP)
-					local_area[i + size][j + size] = map[y][x];
+					local_area[i + size][j + size] = map[x][y];
 			}
 		}
 		return local_area;
@@ -599,6 +601,22 @@ vector<vector<MapCell>> ComportamientoJugador::getLocalArea(int size)
 	else
 		return vector<vector<MapCell>>(0, vector<MapCell>(0));
 }
+
+// bool ComportamientoJugador::wallPrecipiceAround(int size){
+// 	// Comprobar si hay un muro o precipicio en las casillas adyacentes
+//     bool wall_or_precipice_adjacent = false;
+//     // Asumiendo que local_area es un vector<vector<MapCell>> con el área local alrededor del agente
+//     for (int i = -size; i <= size; ++i) {
+//         for (int j = -size; j <= size; ++j) {
+//             if (i == 0 && j == 0) continue; // Ignorar la casilla del agente
+//             if (local_area[i+1][j+1].terrain_type == 'M' || local_area[i+1][j+1].terrain_type == 'P') {
+//                 wall_or_precipice_adjacent = true;
+//                 break;
+//             }
+//         }
+//         if (wall_or_precipice_adjacent) break;
+//     }
+// }
 
 int ComportamientoJugador::batteryCostForward(unsigned char cell)
 {
@@ -659,7 +677,7 @@ int ComportamientoJugador::batteryCostTurnBL_BR(unsigned char cell)
 
 void ComportamientoJugador::updatePositionHistory()
 {
-	position_history.push_back(vision[0].position);
+	position_history.push_back(make_pair(current_state.row, current_state.col));
 
 	if (position_history.size() > LOOP_DETECTION_THRESHOLD)
 		position_history.erase(position_history.begin());
@@ -670,7 +688,7 @@ bool ComportamientoJugador::isLooping()
 	if (position_history.size() < LOOP_DETECTION_THRESHOLD)
 		return false;
 
-	for (int i = 0; i < position_history.size() - 1; i++)
+	for (int i = 0; i < position_history.size(); i++)
 	{
 		if (position_history[i] == position_history[position_history.size() - 1])
 			return true;

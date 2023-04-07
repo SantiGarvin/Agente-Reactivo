@@ -46,6 +46,8 @@ public:
 		current_state.well_situated = false;
 		current_state.has_bikini = current_state.has_sneakers = false;
 
+		wall_detected = false;
+
 		last_action = actIDLE;
 		reset_counter = 0;
 		loop_counter = 0;
@@ -72,15 +74,15 @@ private:
 	const int MAX_SIZE_MAP = 100;
 
 	// ATRACCION
-	const double ATTRACTION_UNVISITED_CELL = 10e3;
-	const double ATTRACTION_UNKNOWN_CELL = 100;
-	const double ATTRACTION_TARGET_CELL = 10e4;
+	const double ATTRACTION_TARGET_CELL = 10000;
+	const double ATTRACTION_UNVISITED_CELL = 1000;
 
 	// REPULSION
-	const double PENALTY_WALL_PRECIPICE = -10e5;
+	const double PENALTY_WALL_PRECIPICE = -1000000;
 
-	const double PENALTY_VISIT_FACTOR = 100.0;
-	const double PENALTY_BATTERY_COST_FACTOR = 1.0;
+	const double PENALTY_VISIT_FACTOR = 5.0;
+	const double PENALTY_BATTERY_COST_FACTOR = 2.0;
+
 
 	const int LOOP_DETECTION_THRESHOLD = 5;
 
@@ -95,6 +97,11 @@ private:
 	bool move_left;
 	bool move_right;
 	bool move_forward;
+
+	bool wall_detected;
+
+	////// debug
+	int counter = 0;
 
 	// ...................... MAPA .............................
 
@@ -131,6 +138,8 @@ private:
 
 	void updatePositionHistory();
 	bool isLooping();
+
+	// bool wallPrecipiceAround(int size);
 
 	Action move(Sensores sensors);
 };
