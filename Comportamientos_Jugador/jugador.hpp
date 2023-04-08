@@ -4,6 +4,8 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+#include <iomanip>
+
 
 #include "comportamientos/comportamiento.hpp"
 using namespace std;
@@ -46,11 +48,14 @@ public:
 		current_state.well_situated = false;
 		current_state.has_bikini = current_state.has_sneakers = false;
 
-		wall_detected = false;
+		turn_counter = 0;
 
 		last_action = actIDLE;
 		reset_counter = 0;
 		loop_counter = 0;
+
+		second_turn_pending = false;
+		battery_charged = false;
 
 		// Inicializar precipicio mapaResultado
 		initPrecipiceLimit();
@@ -72,19 +77,21 @@ private:
 	// ...................... CONSTANTES .............................
 
 	const int MAX_SIZE_MAP = 100;
+	const int TOTAL_BATTERY = 5000;
+	const int MAX_BATTERY_CHARGE = 20;
+	const int LOOP_DETECTION_THRESHOLD = 5;
 
 	// ATRACCION
 	const double ATTRACTION_TARGET_CELL = 10000;
-	const double ATTRACTION_UNVISITED_CELL = 1000;
+	const double ATTRACTION_UNVISITED_CELL = 5000;
 
 	// REPULSION
 	const double PENALTY_WALL_PRECIPICE = -1000000;
+	const double PENALTY_VILLAGER_WOLF = -1000000;
+	const double PENALTY_BIKINI_SNEAKERS = -1000000;
 
 	const double PENALTY_VISIT_FACTOR = 5.0;
-	const double PENALTY_BATTERY_COST_FACTOR = 2.0;
-
-
-	const int LOOP_DETECTION_THRESHOLD = 5;
+	const double PENALTY_BATTERY_COST_FACTOR = 10.0;
 
 	// ...................... VARIABLES .............................
 
@@ -94,11 +101,10 @@ private:
 	int reset_counter;
 	int loop_counter;
 
-	bool move_left;
-	bool move_right;
-	bool move_forward;
+	int turn_counter;
+	bool second_turn_pending;
 
-	bool wall_detected;
+	bool battery_charged;
 
 	////// debug
 	int counter = 0;
@@ -119,19 +125,19 @@ private:
 	void updateState(const Sensores &sensors);
 	void updatePositionOrientation();
 
-	void updateTerrain(MapCell &cell, unsigned char terrain_type = '?');
-
 	int batteryCostForward(unsigned char cell);
 	int batteryCostTurnSL_SR(unsigned char cell);
 	int batteryCostTurnBL_BR(unsigned char cell);
 
 	int worstBatteryCost(BatteryCost battery_cost);
 
+	void updateTerrain(MapCell &cell, unsigned char terrain_type = '?');
+	void updateEntity(MapCell &cell, unsigned char entity_type = '_');
 	void updateBatteryCost(MapCell &cell);
-	void updatePotential(MapCell &cell);
+	void updatePotential(MapCell &cell, const Sensores &sensors);
 
-	void updateMapWithVision(vector<vector<MapCell>> &mapa, Sensores sensores, bool update_mapaResultado = false);
-	void updateMap();
+	void updateMap(const Sensores &sensors);
+	void updateMapWithVision(vector<vector<MapCell>> &mapa, const Sensores &sensors, bool update_mapaResultado = false);
 	void recenterMap(vector<vector<MapCell>> &original_map, int size, const int row_offset, const int col_offset);
 
 	vector<vector<MapCell>> getLocalArea(int size);
@@ -139,9 +145,11 @@ private:
 	void updatePositionHistory();
 	bool isLooping();
 
-	// bool wallPrecipiceAround(int size);
+	Action followPotential();
+	Action followRightWall();
+	Action move();
 
-	Action move(Sensores sensors);
+	bool wallDetected();
 };
 
 #endif

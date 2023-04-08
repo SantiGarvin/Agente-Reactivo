@@ -6,7 +6,7 @@
 			  "type": "cppdbg",
 			  "request": "launch",
 			  "program": "${workspaceFolder}/build/practica1",
-			  "args": ["${workspaceFolder}/mapas/mapa30.map", "0", "0", "3", "3", "3"],
+			  "args": ["${workspaceFolder}/mapas/mapa30.map", "0", "0", "26", "3", "5"],
 			  "stopAtEntry": false,
 			  "cwd": "${workspaceFolder}",
 			  "environment": [],

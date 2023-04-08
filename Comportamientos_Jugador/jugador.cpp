@@ -7,48 +7,7 @@ Action ComportamientoJugador::think(Sensores sensors)
 {
 	Action action = actIDLE;
 
-	// cout << "Posicion: fila " << sensors.posF << " columna " << sensors.posC << " ";
-	// switch (sensors.sentido)
-	// {
-	// case 0:
-	// 	cout << "Norte" << endl;
-	// 	break;
-	// case 1:
-	// 	cout << "Noreste" << endl;
-	// 	break;
-	// case 2:
-	// 	cout << "Este" << endl;
-	// 	break;
-	// case 3:
-	// 	cout << "Sureste" << endl;
-	// 	break;
-	// case 4:
-	// 	cout << "Sur " << endl;
-	// 	break;
-	// case 5:
-	// 	cout << "Suroeste" << endl;
-	// 	break;
-	// case 6:
-	// 	cout << "Oeste" << endl;
-	// 	break;
-	// case 7:
-	// 	cout << "Noroeste" << endl;
-	// 	break;
-	// }
-	// cout << "Terreno: ";
-	// for (int i = 0; i < sensors.terreno.size(); i++)
-	// 	cout << sensors.terreno[i];
-	// cout << endl;
-
-	// cout << "Superficie: ";
-	// for (int i = 0; i < sensors.superficie.size(); i++)
-	// 	cout << sensors.superficie[i];
-	// cout << endl;
-
-	// cout << "Colisión: " << sensors.colision << endl;
-	// cout << "Reset: " << sensors.reset << endl;
-	// cout << "Vida: " << sensors.vida << endl << endl;
-
+	// Actualiza el estado del agente
 	updateState(sensors);
 
 	if (current_state.well_situated)
@@ -57,16 +16,101 @@ Action ComportamientoJugador::think(Sensores sensors)
 		updateMapWithVision(map, sensors);
 
 	// Decide la accion a realizar basado en el estado actual
-	action = move(sensors);
+	action = move();
 
 	// Guarda la ultima accion realizada
 	last_action = action;
 
+	// Actualiza la posicion y orientacion del agente
 	updatePositionOrientation();
 
-	// move_left = (last_action == actTURN_BL || last_action == actTURN_SL);
-	// move_right = (last_action == actTURN_BR || last_action == actTURN_SR);
-	// move_forward = last_action == actFORWARD;
+	////////////////////////////////////////////////////////////////////////7
+	cout << flush;
+
+	cout << "VISION : ";
+	for (int i = 0; i < vision.size() - 7; i++)
+	{
+		cout << i << ":[" << vision[i].terrain_type << "," << vision[i].potential << "]   ";
+		if (i == 0 || i == 3)
+			cout << "||   ";
+	}
+
+	cout << endl
+		 << "ORIENTACION: ";
+	switch (current_state.orientation)
+	{
+	case 0:
+		cout << "Norte";
+		break;
+	case 1:
+		cout << "Noreste";
+		break;
+	case 2:
+		cout << "Este";
+		break;
+	case 3:
+		cout << "Sureste";
+		break;
+	case 4:
+		cout << "Sur";
+		break;
+	case 5:
+		cout << "Suroeste";
+		break;
+	case 6:
+		cout << "Oeste";
+		break;
+	case 7:
+		cout << "Noroeste";
+		break;
+	}
+	cout << endl
+		 << "LAST ACTION: ";
+	switch (last_action)
+	{
+	case 0:
+		cout << "actFORWARD";
+		break;
+	case 1:
+		cout << "actTURN_SL";
+		break;
+	case 2:
+		cout << "actTURN_SR";
+		break;
+	case 3:
+		cout << "actTURN_BL";
+		break;
+	case 4:
+		cout << "actTURN_BR";
+		break;
+	case 5:
+		cout << "actIDLE";
+		break;
+	}
+
+	for (int i = 0; i < local_area.size(); i++)
+	{
+		cout << endl
+			 << endl;
+		for (int j = 0; j < local_area[i].size(); j++)
+		{
+			cout << std::setw(15);
+			if (i == 2 && j == 2)
+				cout << "[[";
+			cout << "[" << local_area[i][j].terrain_type << "," << local_area[i][j].potential << "]";
+			if (i == 2 && j == 2)
+				cout << "]]";
+			cout << setw(15);
+		}
+		cout << endl;
+	}
+	cout << endl
+		 << endl
+		 << endl
+		 << endl;
+	cout << flush;
+
+	//////////////////////////////////////////////////////////////////7
 
 	return action;
 }
@@ -95,10 +139,10 @@ void ComportamientoJugador::initMap(int size)
 		{
 			map[i][j].position = make_pair(i, j);
 			map[i][j].terrain_type = '?';
-			map[i][j].entity_type = '?';
+			map[i][j].entity_type = '_';
 			map[i][j].times_visited = 0;
 			map[i][j].battery_cost = {0, 0, 0};
-			map[i][j].potential = ATTRACTION_UNVISITED_CELL;
+			map[i][j].potential = 0;
 		}
 	}
 }
@@ -109,13 +153,9 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 	if (sensors.reset)
 	{
 		if (sensors.nivel != 0)
-		{
 			current_state = {99, 99, Orientacion::norte, false, false, false};
-		}
 		else
-		{
 			current_state = {sensors.posF, sensors.posC, sensors.sentido, true, false, false};
-		}
 
 		initMap(2 * MAX_SIZE_MAP);
 		reset_counter++;
@@ -208,29 +248,19 @@ void ComportamientoJugador::updatePositionOrientation()
 	}
 }
 
-// void ComportamientoJugador::updateMapaResultado(const Sensores &sensors)
-// {
-// 	if (current_state.well_situated)
-// 	{
-// 		int row_offset = current_state.row - sensors.posF;
-// 		int col_offset = current_state.col - sensors.posC;
-
-// 		for (int i = 0; i < mapaResultado.size(); i++)
-// 		{
-// 			for (int j = 0; j < mapaResultado.size(); j++)
-// 			{
-// 				if (mapaResultado[i][j] == '?')
-// 				{
-// 					mapaResultado[i][j] = map[row_offset + i][col_offset + j];
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+int ComportamientoJugador::worstBatteryCost(BatteryCost battery_cost)
+{
+	return max(max(battery_cost.forward, battery_cost.turnSL_SR), battery_cost.turnBL_BR);
+}
 
 void ComportamientoJugador::updateTerrain(MapCell &cell, unsigned char terrain_type)
 {
 	cell.terrain_type = terrain_type;
+}
+
+void ComportamientoJugador::updateEntity(MapCell &cell, unsigned char entity_type)
+{
+	cell.entity_type = entity_type;
 }
 
 void ComportamientoJugador::updateBatteryCost(MapCell &cell)
@@ -240,18 +270,20 @@ void ComportamientoJugador::updateBatteryCost(MapCell &cell)
 	cell.battery_cost.turnBL_BR = batteryCostTurnBL_BR(cell.terrain_type);
 }
 
-int ComportamientoJugador::worstBatteryCost(BatteryCost battery_cost)
-{
-	return max(max(battery_cost.forward, battery_cost.turnSL_SR), battery_cost.turnBL_BR);
-}
-
-void ComportamientoJugador::updatePotential(MapCell &cell)
+void ComportamientoJugador::updatePotential(MapCell &cell, const Sensores &sensors)
 {
 	double attraction = 0;
 
-	if (cell.terrain_type == 'M' || cell.terrain_type == 'P')
+	bool battery_charge = sensors.bateria < TOTAL_BATTERY * 0.05 && (200 <= sensors.vida && sensors.vida <= 300);
+	bool target = (cell.terrain_type == 'K' && !current_state.has_bikini) || (cell.terrain_type == 'D' && !current_state.has_sneakers);
+
+	if (cell.entity_type == 'a' || cell.entity_type == 'l')
+		attraction = PENALTY_VILLAGER_WOLF;
+	else if (cell.terrain_type == 'M' || cell.terrain_type == 'P')
 		attraction = PENALTY_WALL_PRECIPICE;
-	else if ((cell.terrain_type == 'K' && !current_state.has_bikini) || (cell.terrain_type == 'D' && !current_state.has_sneakers))
+	else if ((cell.terrain_type == 'A' && !current_state.has_bikini) || (cell.terrain_type == 'B' && !current_state.has_sneakers))
+		attraction = PENALTY_BIKINI_SNEAKERS;
+	else if (battery_charge || target)
 		attraction = ATTRACTION_TARGET_CELL;
 	else
 	{
@@ -262,13 +294,25 @@ void ComportamientoJugador::updatePotential(MapCell &cell)
 			attraction -= visit_penalty;
 		else
 			attraction += ATTRACTION_UNVISITED_CELL;
-	
+
 		attraction -= battery_cost_penalty;
 	}
 	cell.potential = round(attraction);
 }
 
-Action ComportamientoJugador::move(Sensores sensors)
+Action ComportamientoJugador::move()
+{
+	Action action = actIDLE;
+
+	// if (wallDetected())
+	// 	action = followRightWall();
+	// else
+	action = followPotential();
+
+	return action;
+}
+
+Action ComportamientoJugador::followPotential()
 {
 	Action action = actIDLE;
 
@@ -277,22 +321,100 @@ Action ComportamientoJugador::move(Sensores sensors)
 	double front_potential = vision[2].potential;
 	double right_potential = vision[3].potential;
 
-	if(front_potential > PENALTY_WALL_PRECIPICE){
-		if (front_potential >= left_potential && front_potential >= right_potential)
-			action = actFORWARD;
-		else if (right_potential > left_potential)
-			action = actTURN_SL;
-		else if (left_potential > right_potential)
+	if (front_potential == PENALTY_WALL_PRECIPICE && left_potential == PENALTY_WALL_PRECIPICE && right_potential == PENALTY_WALL_PRECIPICE)
+		action = actTURN_BL;
+	else
+	{
+		if (front_potential > current_potential && front_potential >= left_potential && front_potential >= right_potential)
+		{
+			if (front_potential > PENALTY_WALL_PRECIPICE)
+				action = actFORWARD;
+		}
+		else if (right_potential > current_potential && right_potential >= left_potential)
 			action = actTURN_SR;
+		else if (left_potential > right_potential)
+			action = actTURN_SL;
 		else
 			action = actTURN_BL;
-	} else 
-		action = actTURN_BR;
-	
+	}
+
 	return action;
 }
 
-void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, Sensores sensores, bool update_mapaResultado)
+Action ComportamientoJugador::followRightWall()
+{
+	Action action = actIDLE;
+
+	bool wall_left = vision[1].terrain_type == 'M';
+	bool wall_front = vision[2].terrain_type == 'M';
+	bool wall_right = vision[3].terrain_type == 'M';
+
+	bool wall_front_left = wall_front && wall_left;
+	bool wall_front_right = wall_front && wall_right;
+	bool wall_left_right = wall_left && wall_right;
+	bool wall_left_front_right = wall_left && wall_front && wall_right;
+
+	bool orientation_NSEW = static_cast<Orientacion>(current_state.orientation % 2 == 0);
+
+	if (second_turn_pending)
+	{
+		if (last_action == actTURN_SL)
+			action = actTURN_SL;
+		else
+			action = actTURN_SR;
+
+		second_turn_pending = false;
+	}
+	else
+	{
+		if (orientation_NSEW)
+		{
+			if (wall_left_front_right)
+			{
+				action = actTURN_SL;
+				second_turn_pending = true;
+			}
+			else if (wall_front_right)
+				action = actTURN_SL;
+			else if (wall_front && !wall_right)
+				action = actTURN_SR;
+			else if (wall_right)
+			{
+				action = actTURN_SL;
+				second_turn_pending = true;
+			}
+			else
+				action = actFORWARD;
+		}
+		else
+		{
+			if (wall_front_left)
+				action = actTURN_SR;
+			else if (wall_front && !wall_left)
+				action = actTURN_SL;
+			else if (wall_left)
+			{
+				action = actTURN_SR;
+				second_turn_pending = true;
+			}
+			else
+				action = actFORWARD;
+		}
+	}
+
+	return action;
+}
+
+bool ComportamientoJugador::wallDetected()
+{
+	bool wall_left = vision[1].terrain_type == 'M';
+	bool wall_front = vision[2].terrain_type == 'M';
+	bool wall_right = vision[3].terrain_type == 'M';
+
+	return wall_left || wall_front || wall_right;
+}
+
+void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, const Sensores &sensors, bool update_mapaResultado)
 {
 	vector<MapCell> cells;
 
@@ -300,13 +422,13 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 	int col = current_state.col;
 	int index = 0;
 
-	updateMap();
+	updateMap(sensors);
 
 	// Actualiza el mapa de terreno
-	updateTerrain(_map[row][col], sensores.terreno[index]);
+	updateTerrain(_map[row][col], sensors.terreno[index]);
 
 	if (update_mapaResultado)
-		mapaResultado[row][col] = sensores.terreno[index];
+		mapaResultado[row][col] = sensors.terreno[index];
 
 	// Actualiza el mapa de visitas
 	_map[row][col].times_visited++;
@@ -315,7 +437,7 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 	cells.push_back(_map[row][col]);
 
 	const int DIM = 4; // dimension de la vision
-	switch (sensores.sentido)
+	switch (sensors.sentido)
 	{
 	case 0: // vision Norte
 		for (int i = 1; i <= DIM - 1; i++)
@@ -328,9 +450,10 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 				index++;
 
 				if (update_mapaResultado)
-					mapaResultado[row][col] = sensores.terreno[index];
+					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensores.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+				updateTerrain(_map[row][col], sensors.terreno[index]);
 
 				cells.push_back(_map[row][col]);
 			}
@@ -357,9 +480,10 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 				index++;
 
 				if (update_mapaResultado)
-					mapaResultado[row][col] = sensores.terreno[index];
+					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensores.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+				updateTerrain(_map[row][col], sensors.terreno[index]);
 
 				cells.push_back(_map[row][col]);
 			}
@@ -376,9 +500,10 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 				index++;
 
 				if (update_mapaResultado)
-					mapaResultado[row][col] = sensores.terreno[index];
+					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensores.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+				updateTerrain(_map[row][col], sensors.terreno[index]);
 
 				cells.push_back(_map[row][col]);
 			}
@@ -405,9 +530,10 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 				index++;
 
 				if (update_mapaResultado)
-					mapaResultado[row][col] = sensores.terreno[index];
+					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensores.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+				updateTerrain(_map[row][col], sensors.terreno[index]);
 
 				cells.push_back(_map[row][col]);
 			}
@@ -424,9 +550,10 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 				index++;
 
 				if (update_mapaResultado)
-					mapaResultado[row][col] = sensores.terreno[index];
+					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensores.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+				updateTerrain(_map[row][col], sensors.terreno[index]);
 
 				cells.push_back(_map[row][col]);
 			}
@@ -453,9 +580,10 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 				index++;
 
 				if (update_mapaResultado)
-					mapaResultado[row][col] = sensores.terreno[index];
+					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensores.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+				updateTerrain(_map[row][col], sensors.terreno[index]);
 
 				cells.push_back(_map[row][col]);
 			}
@@ -472,9 +600,10 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 				index++;
 
 				if (update_mapaResultado)
-					mapaResultado[row][col] = sensores.terreno[index];
+					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensores.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+				updateTerrain(_map[row][col], sensors.terreno[index]);
 
 				cells.push_back(_map[row][col]);
 			}
@@ -501,9 +630,10 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 				index++;
 
 				if (update_mapaResultado)
-					mapaResultado[row][col] = sensores.terreno[index];
+					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensores.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+				updateTerrain(_map[row][col], sensors.terreno[index]);
 
 				cells.push_back(_map[row][col]);
 			}
@@ -511,37 +641,21 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, S
 		break;
 	}
 
-
 	// Obtenemos el area local del agente de dimension 7x7
 	local_area = getLocalArea(2);
-
-////////////////////////////////////////////////////////////////////////7
-
-	cout << flush;
-
-	for(int i=0; i < local_area.size(); i++){
-		cout << endl << endl;
-		for(int j=0; j < local_area[i].size(); j++){			
-			cout << "[" << local_area[i][j].terrain_type << "," << local_area[i][j].potential << "]        ";
-		}
-	}
-	cout << endl << endl << endl;
-	cout << flush;
-
-//////////////////////////////////////////////////////////////////7
 
 	// Actualizar el vector de celdas del campo de vision
 	vision = cells;
 }
 
-void ComportamientoJugador::updateMap()
+void ComportamientoJugador::updateMap(const Sensores &sensors)
 {
 	for (int i = 0; i < map.size(); ++i)
 	{
 		for (int j = 0; j < map[i].size(); ++j)
 		{
 			updateBatteryCost(map[i][j]);
-			updatePotential(map[i][j]);
+			updatePotential(map[i][j], sensors);
 		}
 	}
 }
@@ -592,7 +706,7 @@ vector<vector<MapCell>> ComportamientoJugador::getLocalArea(int size)
 				int y = currentY + j;
 
 				// Verificar que las coordenadas estén dentro del mapa
-				if (x >= 0 && x < 2*MAX_SIZE_MAP && y >= 0 && y < 2*MAX_SIZE_MAP)
+				if (x >= 0 && x < 2 * MAX_SIZE_MAP && y >= 0 && y < 2 * MAX_SIZE_MAP)
 					local_area[i + size][j + size] = map[x][y];
 			}
 		}
@@ -601,22 +715,6 @@ vector<vector<MapCell>> ComportamientoJugador::getLocalArea(int size)
 	else
 		return vector<vector<MapCell>>(0, vector<MapCell>(0));
 }
-
-// bool ComportamientoJugador::wallPrecipiceAround(int size){
-// 	// Comprobar si hay un muro o precipicio en las casillas adyacentes
-//     bool wall_or_precipice_adjacent = false;
-//     // Asumiendo que local_area es un vector<vector<MapCell>> con el área local alrededor del agente
-//     for (int i = -size; i <= size; ++i) {
-//         for (int j = -size; j <= size; ++j) {
-//             if (i == 0 && j == 0) continue; // Ignorar la casilla del agente
-//             if (local_area[i+1][j+1].terrain_type == 'M' || local_area[i+1][j+1].terrain_type == 'P') {
-//                 wall_or_precipice_adjacent = true;
-//                 break;
-//             }
-//         }
-//         if (wall_or_precipice_adjacent) break;
-//     }
-// }
 
 int ComportamientoJugador::batteryCostForward(unsigned char cell)
 {
