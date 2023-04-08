@@ -3,9 +3,8 @@
 
 #include <vector>
 #include <cmath>
-#include <limits>
 #include <iomanip>
-
+#include <algorithm>
 
 #include "comportamientos/comportamiento.hpp"
 using namespace std;
@@ -90,8 +89,8 @@ private:
 	const double PENALTY_VILLAGER_WOLF = -1000000;
 	const double PENALTY_BIKINI_SNEAKERS = -1000000;
 
-	const double PENALTY_VISIT_FACTOR = 5.0;
-	const double PENALTY_BATTERY_COST_FACTOR = 10.0;
+	const double PENALTY_VISIT_FACTOR = 100.0;
+	const double PENALTY_BATTERY_COST_FACTOR = 100.0;
 
 	// ...................... VARIABLES .............................
 
@@ -138,7 +137,12 @@ private:
 
 	void updateMap(const Sensores &sensors);
 	void updateMapWithVision(vector<vector<MapCell>> &mapa, const Sensores &sensors, bool update_mapaResultado = false);
+
+	void rotateMap(vector<vector<MapCell>> &mapa, int angle);
 	void recenterMap(vector<vector<MapCell>> &original_map, int size, const int row_offset, const int col_offset);
+
+	int angleDifference(Orientacion first_orientation, Orientacion second_orientation);
+	int orientationToAngle(Orientacion orientation);
 
 	vector<vector<MapCell>> getLocalArea(int size);
 
