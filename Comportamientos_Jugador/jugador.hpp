@@ -63,7 +63,7 @@ public:
 		map.resize(2 * MAX_SIZE_MAP, vector<MapCell>(2 * MAX_SIZE_MAP));
 
 		// Inicializar mapa auxiliar
-		initMap(2 * MAX_SIZE_MAP);
+		initMap(map);
 	}
 
 	ComportamientoJugador(const ComportamientoJugador &comport) : Comportamiento(comport) {}
@@ -119,7 +119,7 @@ private:
 	// ...................... FUNCIONES .............................
 
 	void initPrecipiceLimit();
-	void initMap(int size);
+	void initMap(vector<vector<MapCell>> &_map);
 
 	void updateState(const Sensores &sensors);
 	void updatePositionOrientation();
@@ -132,17 +132,15 @@ private:
 
 	void updateTerrain(MapCell &cell, unsigned char terrain_type = '?');
 	void updateEntity(MapCell &cell, unsigned char entity_type = '_');
+	void updatePosition(MapCell &cell, int row, int col);
 	void updateBatteryCost(MapCell &cell);
 	void updatePotential(MapCell &cell, const Sensores &sensors);
 
 	void updateMap(const Sensores &sensors);
-	void updateMapWithVision(vector<vector<MapCell>> &mapa, const Sensores &sensors, bool update_mapaResultado = false);
-
-	void rotateMap(vector<vector<MapCell>> &mapa, int angle);
-	void recenterMap(vector<vector<MapCell>> &original_map, int size, const int row_offset, const int col_offset);
-
-	int angleDifference(Orientacion first_orientation, Orientacion second_orientation);
-	int orientationToAngle(Orientacion orientation);
+	void updateResultMap(vector<vector<MapCell>> &aux_map, int row_offset, int col_offset, Orientacion orientation);
+	void updateMapWithVision(vector<vector<MapCell>> &_map, const Sensores &sensors, bool update_mapaResultado = false);
+	
+	void applyOffset(vector<vector<MapCell>> &original_map, int row_offset, int col_offset);
 
 	vector<vector<MapCell>> getLocalArea(int size);
 

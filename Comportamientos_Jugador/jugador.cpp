@@ -92,26 +92,48 @@ Action ComportamientoJugador::think(Sensores sensors)
 		break;
 	}
 
-	for (int i = 0; i < local_area.size(); i++)
-	{
-		cout << endl
-			 << endl;
-		for (int j = 0; j < local_area[i].size(); j++)
-		{
-			cout << std::setw(15);
-			if (i == 2 && j == 2)
-				cout << "[[";
-			cout << "[" << local_area[i][j].terrain_type << "," << local_area[i][j].potential << "]";
-			if (i == 2 && j == 2)
-				cout << "]]";
-			cout << setw(15);
+	// for (int i = 0; i < local_area.size(); i++)
+	// {
+	// 	cout << endl
+	// 		 << endl;
+	// 	for (int j = 0; j < local_area[i].size(); j++)
+	// 	{
+	// 		cout << std::setw(15);
+	// 		if (i == 2 && j == 2)
+	// 			cout << "[[";
+	// 		cout << "[" << local_area[i][j].terrain_type << "," << local_area[i][j].potential << "]";
+	// 		if (i == 2 && j == 2)
+	// 			cout << "]]";
+	// 		cout << setw(15);
+	// 	}
+	// 	cout << endl;
+	// }
+	// cout << endl
+	// 	 << endl
+	// 	 << endl
+	// 	 << endl;
+
+	cout << flush;
+
+	cout << endl;
+	int i=0;
+	for(vector<MapCell> cell : map){
+		for(MapCell c : cell){
+			if(c.position.first == current_state.row && c.position.second == current_state.col)
+				cout << "O";
+			else
+				cout << c.terrain_type;
+			if(c.position.second == 99)
+				cout << " | ";
+		}
+		if(i == 99){
+		cout << endl;
+			for(int i = 0; i < 200; i++)
+				cout << "_";
 		}
 		cout << endl;
+		i++;
 	}
-	cout << endl
-		 << endl
-		 << endl
-		 << endl;
 	cout << flush;
 
 	////////////////////////////////////////////////////////////////////////
@@ -137,18 +159,20 @@ void ComportamientoJugador::initPrecipiceLimit()
 	}
 }
 
-void ComportamientoJugador::initMap(int size)
+void ComportamientoJugador::initMap(vector<vector<MapCell>> &_map)
 {
+	int size = _map.size();
+
 	for (int i = 0; i < size; ++i)
 	{
 		for (int j = 0; j < size; ++j)
 		{
-			map[i][j].position = make_pair(i, j);
-			map[i][j].terrain_type = '?';
-			map[i][j].entity_type = '_';
-			map[i][j].times_visited = 0;
-			map[i][j].battery_cost = {0, 0, 0};
-			map[i][j].potential = 0;
+			_map[i][j].position = make_pair(i, j);
+			_map[i][j].terrain_type = '?';
+			_map[i][j].entity_type = '_';
+			_map[i][j].times_visited = 0;
+			_map[i][j].battery_cost = {0, 0, 0};
+			_map[i][j].potential = 0;
 		}
 	}
 }
@@ -163,7 +187,7 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		else
 			current_state = {sensors.posF, sensors.posC, sensors.sentido, true, false, false};
 
-		initMap(2 * MAX_SIZE_MAP);
+		initMap(map);
 		reset_counter++;
 		last_action = actIDLE;
 	}
@@ -189,7 +213,8 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		current_state.orientation = sensors.sentido;
 
 		// Copia del mapa de la simulacion al mapa de la practica
-		recenterMap(map, mapaResultado.size(), row_offset, col_offset);
+		applyOffset(map, row_offset, col_offset);
+		updateMap(sensors);
 	}
 
 	if (sensors.terreno[0] == 'K')
@@ -269,6 +294,11 @@ void ComportamientoJugador::updateEntity(MapCell &cell, unsigned char entity_typ
 	cell.entity_type = entity_type;
 }
 
+void ComportamientoJugador::updatePosition(MapCell &cell, int row, int col)
+{
+	cell.position = make_pair(row, col);
+}
+
 void ComportamientoJugador::updateBatteryCost(MapCell &cell)
 {
 	cell.battery_cost.forward = batteryCostForward(cell.terrain_type);
@@ -280,7 +310,7 @@ void ComportamientoJugador::updatePotential(MapCell &cell, const Sensores &senso
 {
 	double attraction = 0;
 
-	bool battery_charge = sensors.bateria < TOTAL_BATTERY * 0.05 && (200 <= sensors.vida && sensors.vida <= 300);
+	bool battery_charge = cell.terrain_type == 'X' && sensors.bateria < TOTAL_BATTERY * 0.05 && (200 <= sensors.vida && sensors.vida <= 300);
 	bool target_sneakers_bikini = (cell.terrain_type == 'K' && !current_state.has_bikini) || (cell.terrain_type == 'D' && !current_state.has_sneakers);
 	bool target_position = cell.terrain_type == 'G' && !current_state.well_situated;
 
@@ -315,7 +345,7 @@ Action ComportamientoJugador::move()
 	// 	action = followRightWall();
 	// else
 	action = followPotential();
-
+	action = actFORWARD;
 	return action;
 }
 
@@ -434,6 +464,8 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 	if (update_mapaResultado)
 		mapaResultado[row][col] = sensors.terreno[index];
 
+	index++;
+
 	// Actualiza el mapa de visitas
 	_map[row][col].times_visited++;
 
@@ -451,13 +483,13 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 				int row = current_state.row - i;
 				int col = current_state.col + j;
 
-				index++;
-
 				if (update_mapaResultado)
 					mapaResultado[row][col] = sensors.terreno[index];
-
-				updateEntity(_map[row][col], sensors.superficie[index]);
+				
 				updateTerrain(_map[row][col], sensors.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+
+				index++;
 
 				cells.push_back(_map[row][col]);
 			}
@@ -481,13 +513,14 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 					row += j - i;
 					col += i;
 				}
-				index++;
 
 				if (update_mapaResultado)
 					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateEntity(_map[row][col], sensors.superficie[index]);
 				updateTerrain(_map[row][col], sensors.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+
+				index++;
 
 				cells.push_back(_map[row][col]);
 			}
@@ -501,13 +534,13 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 				int row = current_state.row + j;
 				int col = current_state.col + i;
 
-				index++;
-
 				if (update_mapaResultado)
 					mapaResultado[row][col] = sensors.terreno[index];
 
+				updateTerrain(_map[row][col], sensors.terreno[index]);					
 				updateEntity(_map[row][col], sensors.superficie[index]);
-				updateTerrain(_map[row][col], sensors.terreno[index]);
+
+				index++;
 
 				cells.push_back(_map[row][col]);
 			}
@@ -531,13 +564,14 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 					row += i;
 					col += i - j;
 				}
-				index++;
 
 				if (update_mapaResultado)
 					mapaResultado[row][col] = sensors.terreno[index];
-
-				updateEntity(_map[row][col], sensors.superficie[index]);
+				
 				updateTerrain(_map[row][col], sensors.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+
+				index++;
 
 				cells.push_back(_map[row][col]);
 			}
@@ -551,13 +585,13 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 				int row = current_state.row + i;
 				int col = current_state.col - j;
 
-				index++;
-
 				if (update_mapaResultado)
 					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateEntity(_map[row][col], sensors.superficie[index]);
 				updateTerrain(_map[row][col], sensors.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
+
+				index++;
 
 				cells.push_back(_map[row][col]);
 			}
@@ -581,13 +615,14 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 					row -= j - i;
 					col -= i;
 				}
-				index++;
 
 				if (update_mapaResultado)
 					mapaResultado[row][col] = sensors.terreno[index];
 
+				updateTerrain(_map[row][col], sensors.terreno[index]);				
 				updateEntity(_map[row][col], sensors.superficie[index]);
-				updateTerrain(_map[row][col], sensors.terreno[index]);
+				
+				index++;
 
 				cells.push_back(_map[row][col]);
 			}
@@ -601,13 +636,13 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 				int row = current_state.row - j;
 				int col = current_state.col - i;
 
-				index++;
-
 				if (update_mapaResultado)
 					mapaResultado[row][col] = sensors.terreno[index];
 
+				updateTerrain(_map[row][col], sensors.terreno[index]);				
 				updateEntity(_map[row][col], sensors.superficie[index]);
-				updateTerrain(_map[row][col], sensors.terreno[index]);
+
+				index++;
 
 				cells.push_back(_map[row][col]);
 			}
@@ -631,14 +666,15 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 					row -= i;
 					col += j - i;
 				}
-				index++;
 
 				if (update_mapaResultado)
 					mapaResultado[row][col] = sensors.terreno[index];
 
-				updateEntity(_map[row][col], sensors.superficie[index]);
 				updateTerrain(_map[row][col], sensors.terreno[index]);
+				updateEntity(_map[row][col], sensors.superficie[index]);
 
+				index++;
+				
 				cells.push_back(_map[row][col]);
 			}
 		}
@@ -660,213 +696,89 @@ void ComportamientoJugador::updateMap(const Sensores &sensors)
 	{
 		for (int j = 0; j < map[i].size(); ++j)
 		{
+			updatePosition(map[i][j], i, j);
 			updateBatteryCost(map[i][j]);
 			updatePotential(map[i][j], sensors);
 		}
 	}
 }
 
-void ComportamientoJugador::rotateMap(vector<vector<MapCell>> &original_map, int angle)
+void ComportamientoJugador::updateResultMap(vector<vector<MapCell>> &aux_map, int row_offset, int col_offset, Orientacion orientation)
 {
-	angle = angle % 360;
+    int size = aux_map.size();
 
-	vector<vector<MapCell>> new_map(original_map.size(), vector<MapCell>(original_map.size()));
+    for (int i = 0; i < size; ++i)
+    {
+        for (int j = 0; j < size; ++j)
+        {
+            int new_row = i;
+            int new_col = j;
 
-	for (int i = 0; i < original_map.size(); ++i)
-	{
-		for (int j = 0; j < original_map.size(); ++j)
-		{
-			int new_row = i;
-			int new_col = j;
+            switch (orientation)
+            {
+            case 0: // Norte
+                new_row = i - row_offset;
+                new_col = j - col_offset;
+                break;
+            case 1: // Noreste
+                new_row = i - row_offset + col_offset;
+                new_col = j - col_offset - row_offset;
+                break;
+            case 2: // Este
+                new_row = i + col_offset;
+                new_col = j - row_offset;
+                break;
+            case 3: // Sureste
+                new_row = i + row_offset + col_offset;
+                new_col = j - col_offset + row_offset;
+                break;
+            case 4: // Sur
+                new_row = i + row_offset;
+                new_col = j + col_offset;
+                break;
+            case 5: // Suroeste
+                new_row = i + row_offset - col_offset;
+                new_col = j + col_offset + row_offset;
+                break;
+            case 6: // Oeste
+                new_row = i - col_offset;
+                new_col = j + row_offset;
+                break;
+            case 7: // Noroeste
+                new_row = i - row_offset - col_offset;
+                new_col = j + col_offset - row_offset;
+                break;
+            default:
+                new_row = i;
+                new_col = j;
+                break;
+            }
 
-			switch (angle)
-			{
-			case 45:
-				new_row = i + j;
-				new_col = j - i;
-				break;
-			case 90:
-				new_row = j;
-				new_col = original_map.size() - i - 1;
-				break;
-			case 135:
-				new_row = original_map.size() - i - 1 - j;
-				new_col = original_map.size() - i - 1 + j;
-				break;
-			case 180:
-				new_row = original_map.size() - i - 1;
-				new_col = original_map.size() - j - 1;
-				break;
-			case 225:
-				new_row = original_map.size() - i - 1 + j;
-				new_col = i - j;
-				break;
-			case 270:
-				new_row = original_map.size() - j - 1;
-				new_col = i;
-				break;
-			case 315:
-				new_row = i - j;
-				new_col = i + j;
-				break;
-			default:
-				new_row = i;
-				new_col = j;
-				break;
-			}
-
-			new_map[new_row][new_col] = original_map[i][j];
-		}
-	}
-
-	original_map = new_map;
-
-	vector<MapCell> new_vision;
-
-	for (int i = 0; i < vision.size(); ++i)
-	{
-		int new_row = vision[i].position.first;
-		int new_col = vision[i].position.second;
-
-		switch (angle)
-		{
-		case 45:
-			new_row = vision[i].position.first + vision[i].position.second;
-			new_col = vision[i].position.second - vision[i].position.first;
-			break;
-		case 90:
-			new_row = vision[i].position.second;
-			new_col = original_map.size() - vision[i].position.first - 1;
-			break;
-		case 135:
-			new_row = original_map.size() - vision[i].position.first - 1 - vision[i].position.second;
-			new_col = original_map.size() - vision[i].position.first - 1 + vision[i].position.second;
-			break;
-		case 180:
-			new_row = original_map.size() - vision[i].position.first - 1;
-			new_col = original_map.size() - vision[i].position.second - 1;
-			break;
-		case 225:
-			new_row = original_map.size() - vision[i].position.first - 1 + vision[i].position.second;
-			new_col = vision[i].position.first - vision[i].position.second;
-			break;
-		case 270:
-			new_row = original_map.size() - vision[i].position.second - 1;
-			new_col = vision[i].position.first;
-			break;
-		case 315:
-			new_row = vision[i].position.first - vision[i].position.second;
-			new_col = vision[i].position.first + vision[i].position.second;
-			break;
-		default:
-			new_row = vision[i].position.first;
-			new_col = vision[i].position.second;
-			break;
-		}
-
-		new_vision.push_back(map[new_row][new_col]);
-	}
-
-	vision = new_vision;
-
-	vector<pair<int, int>> new_position_history;
-
-	for (int i = 0; i < position_history.size(); ++i)
-	{
-		int new_row = position_history[i].first;
-		int new_col = position_history[i].second;
-
-		switch (angle)
-		{
-		case 45:
-			new_row = position_history[i].first + position_history[i].second;
-			new_col = position_history[i].second - position_history[i].first;
-			break;
-		case 90:
-			new_row = position_history[i].second;
-			new_col = original_map.size() - position_history[i].first - 1;
-			break;
-		case 135:
-			new_row = original_map.size() - position_history[i].first - 1 - position_history[i].second;
-			new_col = original_map.size() - position_history[i].first - 1 + position_history[i].second;
-			break;
-		case 180:
-			new_row = original_map.size() - position_history[i].first - 1;
-			new_col = original_map.size() - position_history[i].second - 1;
-			break;
-		case 225:
-			new_row = original_map.size() - position_history[i].first - 1 + position_history[i].second;
-			new_col = position_history[i].first - position_history[i].second;
-			break;
-		case 270:
-			new_row = original_map.size() - position_history[i].second - 1;
-			new_col = position_history[i].first;
-			break;
-		case 315:
-			new_row = position_history[i].first - position_history[i].second;
-			new_col = position_history[i].first + position_history[i].second;
-			break;
-		default:
-			new_row = position_history[i].first;
-			new_col = position_history[i].second;
-			break;
-		}
-
-		new_position_history.push_back(make_pair(new_row, new_col));
-	}
-	position_history = new_position_history;
+            if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
+            {
+                mapaResultado[new_row][new_col] = static_cast<unsigned char>(aux_map[i][j].terrain_type);
+            }
+        }
+    }
 }
 
-int ComportamientoJugador::angleDifference(Orientacion first_orientation, Orientacion second_orientation){
-	int first_angle = orientationToAngle(first_orientation);
-	int second_angle = orientationToAngle(second_orientation);
-	
-	return abs(first_angle - second_angle) % 360;
-}
 
-int ComportamientoJugador::orientationToAngle(Orientacion orientation){
-	switch(orientation){
-		case norte:
-			return 0;
-		case noreste:
-			return 45;
-		case este:
-			return 90;
-		case sureste:
-			return 135;
-		case sur:
-			return 180;
-		case suroeste:
-			return 225;
-		case oeste:
-			return 270;
-		case noroeste:
-			return 315;
-		default:
-			return 0;
-	}
-}
-
-void ComportamientoJugador::recenterMap(vector<vector<MapCell>> &original_map, int angle, const int row_offset, const int col_offset)
+void ComportamientoJugador::applyOffset(vector<vector<MapCell>> &_map, int row_offset, int col_offset)
 {
-	int size = original_map.size();
-	{
-		vector<vector<MapCell>> new_map(size, vector<MapCell>(size));
+    int size = _map.size()/2;
 
-		for (int i = 0; i < size; ++i)
-		{
-			for (int j = 0; j < size; ++j)
-			{
-				int new_row = i + row_offset;
-				int new_col = j + col_offset;
-
-				if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
-					new_map[new_row][new_col] = original_map[i][j];
-			}
-		}
-
-		original_map = new_map;
-	}
+    for (int i = 0; i < size; ++i)
+    {
+		int new_row = i + row_offset;
+        for (int j = 0; j < size; ++j)
+        {
+			int new_col = j + col_offset;
+            if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size) {
+				if(mapaResultado[i][j] == '?')
+                	mapaResultado[i][j] = _map[new_row][new_col].terrain_type;
+            }
+        }
+    }
 }
 
 vector<vector<MapCell>> ComportamientoJugador::getLocalArea(int size)
