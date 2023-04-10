@@ -22,123 +22,10 @@ Action ComportamientoJugador::think(Sensores sensors)
 	// Guarda la ultima accion realizada
 	last_action = action;
 
-	// Actualiza la posicion y orientacion del agente
-	updatePositionOrientation();
-
 	////////////////////////////////////////////////////////////////////////
 	// DEBUG															  //
 	////////////////////////////////////////////////////////////////////////
-
-	cout << flush;
-
-	cout << "VISION : ";
-	for (int i = 0; i < vision.size() - 7; i++)
-	{
-		cout << i << ":[" << vision[i].terrain_type << "," << vision[i].potential << "]   ";
-		if (i == 0 || i == 3)
-			cout << "||   ";
-	}
-
-	cout << endl
-		 << "ORIENTACION: ";
-	switch (current_state.orientation)
-	{
-	case 0:
-		cout << "Norte";
-		break;
-	case 1:
-		cout << "Noreste";
-		break;
-	case 2:
-		cout << "Este";
-		break;
-	case 3:
-		cout << "Sureste";
-		break;
-	case 4:
-		cout << "Sur";
-		break;
-	case 5:
-		cout << "Suroeste";
-		break;
-	case 6:
-		cout << "Oeste";
-		break;
-	case 7:
-		cout << "Noroeste";
-		break;
-	}
-	cout << endl
-		 << "LAST ACTION: ";
-	switch (last_action)
-	{
-	case 0:
-		cout << "actFORWARD";
-		break;
-	case 1:
-		cout << "actTURN_SL";
-		break;
-	case 2:
-		cout << "actTURN_SR";
-		break;
-	case 3:
-		cout << "actTURN_BL";
-		break;
-	case 4:
-		cout << "actTURN_BR";
-		break;
-	case 5:
-		cout << "actIDLE";
-		break;
-	}
-
-	// for (int i = 0; i < local_area.size(); i++)
-	// {
-	// 	cout << endl
-	// 		 << endl;
-	// 	for (int j = 0; j < local_area[i].size(); j++)
-	// 	{
-	// 		cout << std::setw(15);
-	// 		if (i == 2 && j == 2)
-	// 			cout << "[[";
-	// 		cout << "[" << local_area[i][j].terrain_type << "," << local_area[i][j].potential << "]";
-	// 		if (i == 2 && j == 2)
-	// 			cout << "]]";
-	// 		cout << setw(15);
-	// 	}
-	// 	cout << endl;
-	// }
-	// cout << endl
-	// 	 << endl
-	// 	 << endl
-	// 	 << endl;
-
-	cout << flush;
-
-	cout << endl;
-	int i=0;
-	for(vector<MapCell> cell : map){
-		for(MapCell c : cell){
-			if(c.position.first == current_state.row && c.position.second == current_state.col)
-				cout << "O";
-			else
-				cout << c.terrain_type;
-			if(c.position.second == 99)
-				cout << " | ";
-		}
-		if(i == 99){
-		cout << endl;
-			for(int i = 0; i < 200; i++)
-				cout << "_";
-		}
-		cout << endl;
-		i++;
-	}
-	cout << flush;
-
-	////////////////////////////////////////////////////////////////////////
-	// DEBUG															  //
-	////////////////////////////////////////////////////////////////////////
+	debug(true);
 
 	return action;
 }
@@ -179,6 +66,8 @@ void ComportamientoJugador::initMap(vector<vector<MapCell>> &_map)
 
 void ComportamientoJugador::updateState(const Sensores &sensors)
 {
+	updatePositionOrientation();
+
 	// Reinicio de la simulacion
 	if (sensors.reset)
 	{
@@ -212,9 +101,8 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 		current_state.well_situated = true;
 		current_state.orientation = sensors.sentido;
 
-		// Copia del mapa de la simulacion al mapa de la practica
-		applyOffset(map, row_offset, col_offset);
-		updateMap(sensors);
+		// // Copia del mapa de la simulacion al mapa de la practica
+		// applyOffset(map, row_offset, col_offset);
 	}
 
 	if (sensors.terreno[0] == 'K')
@@ -226,56 +114,55 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 
 void ComportamientoJugador::updatePositionOrientation()
 {
-	if (last_action != actIDLE)
+	switch (last_action)
 	{
-		switch (last_action)
+	case actFORWARD:
+		switch (current_state.orientation)
 		{
-		case actFORWARD:
-			switch (current_state.orientation)
-			{
-			case norte:
-				current_state.row--;
-				break;
-			case noreste:
-				current_state.row--;
-				current_state.col++;
-				break;
-			case este:
-				current_state.col++;
-				break;
-			case sureste:
-				current_state.row++;
-				current_state.col++;
-				break;
-			case sur:
-				current_state.row++;
-				break;
-			case suroeste:
-				current_state.row++;
-				current_state.col--;
-				break;
-			case oeste:
-				current_state.col--;
-				break;
-			case noroeste:
-				current_state.row--;
-				current_state.col--;
-				break;
-			}
+		case norte:
+			current_state.row--;
 			break;
-		case actTURN_SL: // giro a la izquierda 45 grados
-			current_state.orientation = static_cast<Orientacion>((current_state.orientation + 7) % 8);
+		case noreste:
+			current_state.row--;
+			current_state.col++;
 			break;
-		case actTURN_SR: // giro a la derecha 45 grados
-			current_state.orientation = static_cast<Orientacion>((current_state.orientation + 1) % 8);
+		case este:
+			current_state.col++;
 			break;
-		case actTURN_BL: // giro a la izquierda 135 grados
-			current_state.orientation = static_cast<Orientacion>((current_state.orientation + 5) % 8);
+		case sureste:
+			current_state.row++;
+			current_state.col++;
 			break;
-		case actTURN_BR: // giro a la derecha 135 grados
-			current_state.orientation = static_cast<Orientacion>((current_state.orientation + 3) % 8);
+		case sur:
+			current_state.row++;
+			break;
+		case suroeste:
+			current_state.row++;
+			current_state.col--;
+			break;
+		case oeste:
+			current_state.col--;
+			break;
+		case noroeste:
+			current_state.row--;
+			current_state.col--;
 			break;
 		}
+		break;
+	case actTURN_SL: // giro a la izquierda 45 grados
+		current_state.orientation = static_cast<Orientacion>((current_state.orientation + 7) % 8);
+		break;
+	case actTURN_SR: // giro a la derecha 45 grados
+		current_state.orientation = static_cast<Orientacion>((current_state.orientation + 1) % 8);
+		break;
+	case actTURN_BL: // giro a la izquierda 135 grados
+		current_state.orientation = static_cast<Orientacion>((current_state.orientation + 5) % 8);
+		break;
+	case actTURN_BR: // giro a la derecha 135 grados
+		current_state.orientation = static_cast<Orientacion>((current_state.orientation + 3) % 8);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -345,7 +232,7 @@ Action ComportamientoJugador::move()
 	// 	action = followRightWall();
 	// else
 	action = followPotential();
-	action = actFORWARD;
+	// action = actFORWARD;
 	return action;
 }
 
@@ -464,13 +351,13 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 	if (update_mapaResultado)
 		mapaResultado[row][col] = sensors.terreno[index];
 
-	index++;
-
 	// Actualiza el mapa de visitas
 	_map[row][col].times_visited++;
 
 	// Aniade la celda actual a la lista de celdas
 	cells.push_back(_map[row][col]);
+
+	index++;
 
 	const int DIM = 4; // dimension de la vision
 	switch (sensors.sentido)
@@ -483,15 +370,18 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 				int row = current_state.row - i;
 				int col = current_state.col + j;
 
-				if (update_mapaResultado)
-					mapaResultado[row][col] = sensors.terreno[index];
-				
-				updateTerrain(_map[row][col], sensors.terreno[index]);
-				updateEntity(_map[row][col], sensors.superficie[index]);
+				if (row >= 0 && row < _map.size() && col >= 0 && col < _map[0].size())
+				{
+					if (update_mapaResultado && mapaResultado[row][col] == '?')
+						mapaResultado[row][col] = sensors.terreno[index];
 
-				index++;
+					updateTerrain(_map[row][col], sensors.terreno[index]);
+					updateEntity(_map[row][col], sensors.superficie[index]);
 
-				cells.push_back(_map[row][col]);
+					index++;
+
+					cells.push_back(_map[row][col]);
+				}
 			}
 		}
 		break;
@@ -500,29 +390,30 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 		{
 			for (int j = -i; j <= i; j++)
 			{
-				int row = current_state.row;
-				int col = current_state.col;
+				int row = current_state.row - i;
+				int col = current_state.col + i;
 
-				if (j <= 0)
+				if (j < 0)
 				{
-					row -= i;
-					col += i + j;
+					col += j;
 				}
-				else
+				else if (j > 0)
 				{
-					row += j - i;
-					col += i;
+					row += j;
 				}
 
-				if (update_mapaResultado)
-					mapaResultado[row][col] = sensors.terreno[index];
+				if (row >= 0 && row < _map.size() && col >= 0 && col < _map[0].size())
+				{
+					if (update_mapaResultado && mapaResultado[row][col] == '?')
+						mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensors.terreno[index]);
-				updateEntity(_map[row][col], sensors.superficie[index]);
+					updateTerrain(_map[row][col], sensors.terreno[index]);
+					updateEntity(_map[row][col], sensors.superficie[index]);
 
-				index++;
+					index++;
 
-				cells.push_back(_map[row][col]);
+					cells.push_back(_map[row][col]);
+				}
 			}
 		}
 		break;
@@ -534,15 +425,18 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 				int row = current_state.row + j;
 				int col = current_state.col + i;
 
-				if (update_mapaResultado)
-					mapaResultado[row][col] = sensors.terreno[index];
+				if (row >= 0 && row < _map.size() && col >= 0 && col < _map[0].size())
+				{
+					if (update_mapaResultado && mapaResultado[row][col] == '?')
+						mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensors.terreno[index]);					
-				updateEntity(_map[row][col], sensors.superficie[index]);
+					updateTerrain(_map[row][col], sensors.terreno[index]);
+					updateEntity(_map[row][col], sensors.superficie[index]);
 
-				index++;
+					index++;
 
-				cells.push_back(_map[row][col]);
+					cells.push_back(_map[row][col]);
+				}
 			}
 		}
 		break;
@@ -551,29 +445,30 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 		{
 			for (int j = -i; j <= i; j++)
 			{
-				int row = current_state.row;
-				int col = current_state.col;
+				int row = current_state.row + i;
+				int col = current_state.col + i;
 
-				if (j <= 0)
+				if (j < 0)
 				{
-					row += i + j;
-					col += i;
+					row += j;
 				}
-				else
+				else if (j > 0)
 				{
-					row += i;
-					col += i - j;
+					col -= j;
 				}
 
-				if (update_mapaResultado)
-					mapaResultado[row][col] = sensors.terreno[index];
-				
-				updateTerrain(_map[row][col], sensors.terreno[index]);
-				updateEntity(_map[row][col], sensors.superficie[index]);
+				if (row >= 0 && row < _map.size() && col >= 0 && col < _map[0].size())
+				{
+					if (update_mapaResultado && mapaResultado[row][col] == '?')
+						mapaResultado[row][col] = sensors.terreno[index];
 
-				index++;
+					updateTerrain(_map[row][col], sensors.terreno[index]);
+					updateEntity(_map[row][col], sensors.superficie[index]);
 
-				cells.push_back(_map[row][col]);
+					index++;
+
+					cells.push_back(_map[row][col]);
+				}
 			}
 		}
 		break;
@@ -585,15 +480,18 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 				int row = current_state.row + i;
 				int col = current_state.col - j;
 
-				if (update_mapaResultado)
-					mapaResultado[row][col] = sensors.terreno[index];
+				if (row >= 0 && row < _map.size() && col >= 0 && col < _map[0].size())
+				{
+					if (update_mapaResultado && mapaResultado[row][col] == '?')
+						mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensors.terreno[index]);
-				updateEntity(_map[row][col], sensors.superficie[index]);
+					updateTerrain(_map[row][col], sensors.terreno[index]);
+					updateEntity(_map[row][col], sensors.superficie[index]);
 
-				index++;
+					index++;
 
-				cells.push_back(_map[row][col]);
+					cells.push_back(_map[row][col]);
+				}
 			}
 		}
 		break;
@@ -602,29 +500,30 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 		{
 			for (int j = -i; j <= i; j++)
 			{
-				int row = current_state.row;
-				int col = current_state.col;
+				int row = current_state.row + i;
+				int col = current_state.col - i;
 
-				if (j <= 0)
+				if (j < 0)
 				{
-					row += i;
-					col -= i + j;
+					col -= j;
 				}
-				else
+				else if (j > 0)
 				{
-					row -= j - i;
-					col -= i;
+					row -= j;
 				}
 
-				if (update_mapaResultado)
-					mapaResultado[row][col] = sensors.terreno[index];
+				if (row >= 0 && row < _map.size() && col >= 0 && col < _map[0].size())
+				{
+					if (update_mapaResultado && mapaResultado[row][col] == '?')
+						mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensors.terreno[index]);				
-				updateEntity(_map[row][col], sensors.superficie[index]);
-				
-				index++;
+					updateTerrain(_map[row][col], sensors.terreno[index]);
+					updateEntity(_map[row][col], sensors.superficie[index]);
 
-				cells.push_back(_map[row][col]);
+					index++;
+
+					cells.push_back(_map[row][col]);
+				}
 			}
 		}
 		break;
@@ -636,15 +535,18 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 				int row = current_state.row - j;
 				int col = current_state.col - i;
 
-				if (update_mapaResultado)
-					mapaResultado[row][col] = sensors.terreno[index];
+				if (row >= 0 && row < _map.size() && col >= 0 && col < _map[0].size())
+				{
+					if (update_mapaResultado && mapaResultado[row][col] == '?')
+						mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensors.terreno[index]);				
-				updateEntity(_map[row][col], sensors.superficie[index]);
+					updateTerrain(_map[row][col], sensors.terreno[index]);
+					updateEntity(_map[row][col], sensors.superficie[index]);
 
-				index++;
+					index++;
 
-				cells.push_back(_map[row][col]);
+					cells.push_back(_map[row][col]);
+				}
 			}
 		}
 		break;
@@ -653,41 +555,52 @@ void ComportamientoJugador::updateMapWithVision(vector<vector<MapCell>> &_map, c
 		{
 			for (int j = -i; j <= i; j++)
 			{
-				int row = current_state.row;
-				int col = current_state.col;
+				int row = current_state.row - i;
+				int col = current_state.col - i;
 
-				if (j <= 0)
+				if (j < 0)
 				{
-					row -= j + i;
-					col -= i;
+					row -= j;
 				}
-				else
+				else if (j > 0)
 				{
-					row -= i;
-					col += j - i;
+					col += j;
 				}
 
-				if (update_mapaResultado)
-					mapaResultado[row][col] = sensors.terreno[index];
+				if (row >= 0 && row < _map.size() && col >= 0 && col < _map[0].size())
+				{
+					if (update_mapaResultado && mapaResultado[row][col] == '?')
+						mapaResultado[row][col] = sensors.terreno[index];
 
-				updateTerrain(_map[row][col], sensors.terreno[index]);
-				updateEntity(_map[row][col], sensors.superficie[index]);
+					updateTerrain(_map[row][col], sensors.terreno[index]);
+					updateEntity(_map[row][col], sensors.superficie[index]);
 
-				index++;
-				
-				cells.push_back(_map[row][col]);
+					index++;
+
+					cells.push_back(_map[row][col]);
+				}
 			}
 		}
 		break;
 	}
 
 	updateMap(sensors);
+	updateVision(sensors);
 
 	// Obtenemos el area local del agente de dimension 5x5
 	local_area = getLocalArea(2);
 
 	// Actualizar el vector de celdas del campo de vision
 	vision = cells;
+}
+
+void ComportamientoJugador::updateVision(const Sensores &sensors)
+{
+	for (MapCell c : vision)
+	{
+		updateBatteryCost(c);
+		updatePotential(c, sensors);
+	}
 }
 
 void ComportamientoJugador::updateMap(const Sensores &sensors)
@@ -703,82 +616,82 @@ void ComportamientoJugador::updateMap(const Sensores &sensors)
 	}
 }
 
-void ComportamientoJugador::updateResultMap(vector<vector<MapCell>> &aux_map, int row_offset, int col_offset, Orientacion orientation)
-{
-    int size = aux_map.size();
+// void ComportamientoJugador::updateResultMap(vector<vector<MapCell>> &aux_map, int row_offset, int col_offset, Orientacion orientation)
+// {
+// 	int size = aux_map.size();
 
-    for (int i = 0; i < size; ++i)
-    {
-        for (int j = 0; j < size; ++j)
-        {
-            int new_row = i;
-            int new_col = j;
+// 	for (int i = 0; i < size; ++i)
+// 	{
+// 		for (int j = 0; j < size; ++j)
+// 		{
+// 			int new_row = i;
+// 			int new_col = j;
 
-            switch (orientation)
-            {
-            case 0: // Norte
-                new_row = i - row_offset;
-                new_col = j - col_offset;
-                break;
-            case 1: // Noreste
-                new_row = i - row_offset + col_offset;
-                new_col = j - col_offset - row_offset;
-                break;
-            case 2: // Este
-                new_row = i + col_offset;
-                new_col = j - row_offset;
-                break;
-            case 3: // Sureste
-                new_row = i + row_offset + col_offset;
-                new_col = j - col_offset + row_offset;
-                break;
-            case 4: // Sur
-                new_row = i + row_offset;
-                new_col = j + col_offset;
-                break;
-            case 5: // Suroeste
-                new_row = i + row_offset - col_offset;
-                new_col = j + col_offset + row_offset;
-                break;
-            case 6: // Oeste
-                new_row = i - col_offset;
-                new_col = j + row_offset;
-                break;
-            case 7: // Noroeste
-                new_row = i - row_offset - col_offset;
-                new_col = j + col_offset - row_offset;
-                break;
-            default:
-                new_row = i;
-                new_col = j;
-                break;
-            }
+// 			switch (orientation)
+// 			{
+// 			case 0: // Norte
+// 				new_row = i - row_offset;
+// 				new_col = j - col_offset;
+// 				break;
+// 			case 1: // Noreste
+// 				new_row = i - row_offset + col_offset;
+// 				new_col = j - col_offset - row_offset;
+// 				break;
+// 			case 2: // Este
+// 				new_row = i + col_offset;
+// 				new_col = j - row_offset;
+// 				break;
+// 			case 3: // Sureste
+// 				new_row = i + row_offset + col_offset;
+// 				new_col = j - col_offset + row_offset;
+// 				break;
+// 			case 4: // Sur
+// 				new_row = i + row_offset;
+// 				new_col = j + col_offset;
+// 				break;
+// 			case 5: // Suroeste
+// 				new_row = i + row_offset - col_offset;
+// 				new_col = j + col_offset + row_offset;
+// 				break;
+// 			case 6: // Oeste
+// 				new_row = i - col_offset;
+// 				new_col = j + row_offset;
+// 				break;
+// 			case 7: // Noroeste
+// 				new_row = i - row_offset - col_offset;
+// 				new_col = j + col_offset - row_offset;
+// 				break;
+// 			default:
+// 				new_row = i;
+// 				new_col = j;
+// 				break;
+// 			}
 
-            if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
-            {
-                mapaResultado[new_row][new_col] = static_cast<unsigned char>(aux_map[i][j].terrain_type);
-            }
-        }
-    }
-}
-
+// 			if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
+// 			{
+// 				mapaResultado[new_row][new_col] = static_cast<unsigned char>(aux_map[i][j].terrain_type);
+// 			}
+// 		}
+// 	}
+// }
 
 void ComportamientoJugador::applyOffset(vector<vector<MapCell>> &_map, int row_offset, int col_offset)
 {
-    int size = _map.size()/2;
+	int size = _map.size() / 2;
 
-    for (int i = 0; i < size; ++i)
-    {
+	for (int i = 0; i < size; ++i)
+	{
 		int new_row = i + row_offset;
-        for (int j = 0; j < size; ++j)
-        {
+		for (int j = 0; j < size; ++j)
+		{
 			int new_col = j + col_offset;
-            if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size) {
-				if(mapaResultado[i][j] == '?')
-                	mapaResultado[i][j] = _map[new_row][new_col].terrain_type;
-            }
-        }
-    }
+			if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
+			{
+				if (mapaResultado[i][j] == '?')
+					mapaResultado[i][j] = _map[new_row][new_col].terrain_type;
+			}
+		}
+	}
 }
 
 vector<vector<MapCell>> ComportamientoJugador::getLocalArea(int size)
@@ -893,4 +806,225 @@ bool ComportamientoJugador::isLooping()
 int ComportamientoJugador::interact(Action accion, int valor)
 {
 	return false;
+}
+
+int cellWidth(const MapCell &cell)
+{
+	stringstream cell_content;
+	cell_content << "[" << cell.terrain_type << "," << cell.potential << "]";
+	return cell_content.str().length();
+}
+
+string cellString(int index, const MapCell &cell)
+{
+	stringstream cell_content;
+	cell_content << index << ":[" << cell.terrain_type << "," << cell.potential << "]";
+	return cell_content.str();
+}
+
+void ComportamientoJugador::debug(bool debug, bool mapa)
+{
+	if (debug)
+	{
+		cout << flush;
+
+		cout << "FILA: " << current_state.row << "   COL: " << current_state.col << endl;
+		cout << "ORIENTACION: ";
+		switch (current_state.orientation)
+		{
+		case 0:
+			cout << "Norte";
+			break;
+		case 1:
+			cout << "Noreste";
+			break;
+		case 2:
+			cout << "Este";
+			break;
+		case 3:
+			cout << "Sureste";
+			break;
+		case 4:
+			cout << "Sur";
+			break;
+		case 5:
+			cout << "Suroeste";
+			break;
+		case 6:
+			cout << "Oeste";
+			break;
+		case 7:
+			cout << "Noroeste";
+			break;
+		}
+		cout << endl
+			 << "LAST ACTION: ";
+		switch (last_action)
+		{
+		case 0:
+			cout << "actFORWARD";
+			break;
+		case 1:
+			cout << "actTURN_SL";
+			break;
+		case 2:
+			cout << "actTURN_SR";
+			break;
+		case 3:
+			cout << "actTURN_BL";
+			break;
+		case 4:
+			cout << "actTURN_BR";
+			break;
+		case 5:
+			cout << "actIDLE";
+			break;
+		}
+
+		cout << endl
+			 << endl;
+		cout << "Vision:" << endl;
+
+		int row = 3;	// El número de filas en el triángulo invertido
+		int spaces = 4; // El número de espacios entre las celdas
+
+		for (int i = row - 1; i >= 0; i--)
+		{
+			// Calcular el índice de inicio y el número de celdas en la fila actual
+			int start_index = i == 2 ? vision.size() - 5 : (i == 1 ? 3 : 0);
+			int num_cells = i == 2 ? 5 : (i == 1 ? 3 : 1);
+
+			// Calcular el ancho total de las celdas en la fila actual
+			int total_width = 0;
+			for (int j = 0; j < num_cells; j++)
+			{
+				total_width += cellString(start_index + j, vision[start_index + j]).length();
+			}
+			total_width += (num_cells - 1) * spaces;
+
+			// Agregar espacios iniciales para centrar las filas
+			if (i < 2)
+			{
+				int top_row_width = 0;
+				for (int j = 0; j < 5; j++)
+				{
+					top_row_width += cellString(vision.size() - 5 + j, vision[vision.size() - 5 + j]).length();
+				}
+				top_row_width += 4 * spaces;
+
+				int padding = (top_row_width - total_width) / 2;
+				for (int j = 0; j < padding; j++)
+				{
+					cout << " ";
+				}
+			}
+
+			// Agregar las celdas
+			for (int j = 0; j < num_cells; j++)
+			{
+				int index = start_index + j;
+				cout << cellString(index, vision[index]);
+
+				// Agregar espacios entre las celdas
+				if (j < num_cells - 1)
+				{
+					for (int k = 0; k < spaces; k++)
+					{
+						cout << " ";
+					}
+				}
+			}
+
+			// Imprimir la fila
+			cout << endl << endl;
+		}
+		if (mapa)
+		{
+			cout << "Mapa Auxiliar:";
+			cout << endl;
+			cout << flush;
+			int i = 0;
+			for (int i = 0; i < 200; ++i)
+			{
+				for (int j = 0; j < 200; ++j)
+				{
+					MapCell c = map[i][j];
+					if (c.position.first == current_state.row && c.position.second == current_state.col)
+						cout << "O";
+					else
+						cout << "(" << c.position.first << "," << c.position.second << ") ";
+					cout << c.terrain_type;
+					if (c.position.second == 99)
+						cout << " | ";
+				}
+				if (i == 99)
+				{
+					cout << endl;
+					for (int i = 0; i < 200; i++)
+						cout << "_";
+				}
+				cout << endl;
+			}
+		}
+		else
+		{
+			cout << "Mapa Local:";
+			for (int i = 0; i < local_area.size(); i++)
+			{
+				cout << endl
+					 << endl;
+
+				// Imprimir los tipos de casilla
+				for (int j = 0; j < local_area[i].size(); j++)
+				{
+					// Calcular el ancho máximo de las celdas en la columna actual
+					int max_width = 0;
+					for (int k = 0; k < local_area.size(); k++)
+					{
+						max_width = max(max_width, cellWidth(local_area[k][j]));
+					}
+
+					// Incrementar el ancho máximo en 7 para dejar un espacio de 7 caracteres entre celdas
+					max_width += 7;
+
+					stringstream cell_content;
+					if (i == 2 && j == 2)
+						cell_content << "{";
+					else
+						cell_content << "[";
+					cell_content << local_area[i][j].terrain_type << "," << local_area[i][j].potential;
+					if (i == 2 && j == 2)
+						cell_content << "}";
+					else
+						cell_content << "]";
+
+					cout << setw(max_width) << left << cell_content.str();
+				}
+
+				cout << endl;
+
+				// Imprimir las posiciones
+				for (int j = 0; j < local_area[i].size(); j++)
+				{
+					// Calcular el ancho máximo de las celdas en la columna actual
+					int max_width = 0;
+					for (int k = 0; k < local_area.size(); k++)
+					{
+						max_width = max(max_width, cellWidth(local_area[k][j]));
+					}
+
+					// Incrementar el ancho máximo en 7 para dejar un espacio de 7 caracteres entre celdas
+					max_width += 7;
+
+					stringstream cell_content;
+					cell_content << "(" << local_area[i][j].position.first << "," << local_area[i][j].position.second << ")";
+
+					cout << setw(max_width) << left << cell_content.str();
+				}
+
+				cout << endl;
+			}
+		}
+		cout << flush;
+	}
 }

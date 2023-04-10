@@ -1,10 +1,11 @@
 #ifndef COMPORTAMIENTOJUGADOR_H
 #define COMPORTAMIENTOJUGADOR_H
 
+#include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <vector>
 #include <cmath>
-#include <iomanip>
-#include <algorithm>
 
 #include "comportamientos/comportamiento.hpp"
 using namespace std;
@@ -89,7 +90,7 @@ private:
 	const double PENALTY_VILLAGER_WOLF = -1000000;
 	const double PENALTY_BIKINI_SNEAKERS = -1000000;
 
-	const double PENALTY_VISIT_FACTOR = 100.0;
+	const double PENALTY_VISIT_FACTOR = 10000.0;
 	const double PENALTY_BATTERY_COST_FACTOR = 100.0;
 
 	// ...................... VARIABLES .............................
@@ -118,6 +119,8 @@ private:
 
 	// ...................... FUNCIONES .............................
 
+	void debug(bool debug, bool mapa=false);
+
 	void initPrecipiceLimit();
 	void initMap(vector<vector<MapCell>> &_map);
 
@@ -137,6 +140,7 @@ private:
 	void updatePotential(MapCell &cell, const Sensores &sensors);
 
 	void updateMap(const Sensores &sensors);
+	void updateVision(const Sensores &sensors);
 	void updateResultMap(vector<vector<MapCell>> &aux_map, int row_offset, int col_offset, Orientacion orientation);
 	void updateMapWithVision(vector<vector<MapCell>> &_map, const Sensores &sensors, bool update_mapaResultado = false);
 	
