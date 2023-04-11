@@ -65,6 +65,9 @@ public:
 
 		// Inicializar mapa auxiliar
 		initMap(map);
+
+		// Inicializar vision
+		initVision();
 	}
 
 	ComportamientoJugador(const ComportamientoJugador &comport) : Comportamiento(comport) {}
@@ -82,7 +85,7 @@ private:
 	const int LOOP_DETECTION_THRESHOLD = 5;
 
 	// ATRACCION
-	const double ATTRACTION_TARGET_CELL = 10000;
+	const double ATTRACTION_TARGET_CELL = 20000;
 	const double ATTRACTION_UNVISITED_CELL = 5000;
 
 	// REPULSION
@@ -90,8 +93,8 @@ private:
 	const double PENALTY_VILLAGER_WOLF = -1000000;
 	const double PENALTY_BIKINI_SNEAKERS = -1000000;
 
-	const double PENALTY_VISIT_FACTOR = 10000.0;
-	const double PENALTY_BATTERY_COST_FACTOR = 100.0;
+	const double PENALTY_VISIT_FACTOR = 10.0;
+	const double PENALTY_BATTERY_COST_FACTOR = 10.0;
 
 	// ...................... VARIABLES .............................
 
@@ -123,6 +126,7 @@ private:
 
 	void initPrecipiceLimit();
 	void initMap(vector<vector<MapCell>> &_map);
+	void initVision();
 
 	void updateState(const Sensores &sensors);
 	void updatePositionOrientation();
@@ -139,11 +143,11 @@ private:
 	void updateBatteryCost(MapCell &cell);
 	void updatePotential(MapCell &cell, const Sensores &sensors);
 
+	void updateMapWithVision(const Sensores &sensors, bool update_mapaResultado = false);
 	void updateMap(const Sensores &sensors);
 	void updateVision(const Sensores &sensors);
-	void updateResultMap(vector<vector<MapCell>> &aux_map, int row_offset, int col_offset, Orientacion orientation);
-	void updateMapWithVision(vector<vector<MapCell>> &_map, const Sensores &sensors, bool update_mapaResultado = false);
 	
+	void updateResultMap(int row_offset, int col_offset, Orientacion orientation);
 	void applyOffset(vector<vector<MapCell>> &original_map, int row_offset, int col_offset);
 
 	vector<vector<MapCell>> getLocalArea(int size);
