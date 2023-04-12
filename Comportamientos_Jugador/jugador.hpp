@@ -52,9 +52,12 @@ public:
 
 		last_action = actIDLE;
 		reset_counter = 0;
-		loop_counter = 0;
+		is_looping = false;
 
 		second_turn_pending = false;
+		act_forward_pending = false;
+		continue_following_wall = true;
+
 		battery_charged = false;
 
 		// Inicializar precipicio mapaResultado
@@ -87,14 +90,16 @@ private:
 	// ATRACCION
 	const double ATTRACTION_TARGET_CELL = 20000;
 	const double ATTRACTION_UNVISITED_CELL = 5000;
+	const double ATTRACTION_TARGET = 50;
 
 	// REPULSION
-	const double PENALTY_WALL_PRECIPICE = -1000000;
-	const double PENALTY_VILLAGER_WOLF = -1000000;
-	const double PENALTY_BIKINI_SNEAKERS = -1000000;
+	const double MAX_PENALTY = -1000000;
+	const double PENALTY_WALL_PRECIPICE = MAX_PENALTY;
+	const double PENALTY_VILLAGER_WOLF = MAX_PENALTY;
+	const double PENALTY_BIKINI_SNEAKERS = MAX_PENALTY;
 
-	const double PENALTY_VISIT_FACTOR = 10.0;
-	const double PENALTY_BATTERY_COST_FACTOR = 10.0;
+	const double PENALTY_VISIT_FACTOR = 10000.0;
+	const double PENALTY_BATTERY_COST_FACTOR = 5.0;
 
 	// ...................... VARIABLES .............................
 
@@ -102,10 +107,13 @@ private:
 	Action last_action;
 
 	int reset_counter;
-	int loop_counter;
+	bool is_looping;
 
 	int turn_counter;
+	
+	bool continue_following_wall;
 	bool second_turn_pending;
+	bool act_forward_pending;
 
 	bool battery_charged;
 
@@ -147,9 +155,14 @@ private:
 	void updateMap(const Sensores &sensors);
 	void updateVision(const Sensores &sensors);
 	
+	//____________________
 	void updateResultMap(int row_offset, int col_offset, Orientacion orientation);
 	void applyOffset(vector<vector<MapCell>> &original_map, int row_offset, int col_offset);
+	//____________________
 
+	int targetInVision();
+	void goToTarget();
+	
 	vector<vector<MapCell>> getLocalArea(int size);
 
 	void updatePositionHistory();
@@ -158,8 +171,14 @@ private:
 	Action followPotential();
 	Action followRightWall();
 	Action move();
+	Action betterPotentialVision();
+
+	vector<MapCell> getLeftSideVision();
+	vector<MapCell> getRightSideVision();
+	vector<MapCell> getFrontSideVision();
 
 	bool wallDetected();
+	double potentialAverage(const vector<MapCell> &cells);
 };
 
 #endif
