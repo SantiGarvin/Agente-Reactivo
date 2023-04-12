@@ -50,15 +50,13 @@ public:
 
 		turn_counter = 0;
 
+		precipice_limit_updated = false;
+
 		last_action = actIDLE;
 		reset_counter = 0;
 		is_looping = false;
 
-		second_turn_pending = false;
-		act_forward_pending = false;
-		continue_following_wall = true;
-
-		battery_charged = false;
+		following_wall = false;
 
 		// Inicializar precipicio mapaResultado
 		initPrecipiceLimit();
@@ -90,32 +88,31 @@ private:
 	// ATRACCION
 	const double ATTRACTION_TARGET_CELL = 20000;
 	const double ATTRACTION_UNVISITED_CELL = 5000;
-	const double ATTRACTION_TARGET = 50;
+	const double ATTRACTION_TARGET = 100;
 
 	// REPULSION
 	const double MAX_PENALTY = -1000000;
 	const double PENALTY_WALL_PRECIPICE = MAX_PENALTY;
 	const double PENALTY_VILLAGER_WOLF = MAX_PENALTY;
 	const double PENALTY_BIKINI_SNEAKERS = MAX_PENALTY;
+	const double PENALTY_PRECIPICE_LIMIT = 20;
 
-	const double PENALTY_VISIT_FACTOR = 10000.0;
-	const double PENALTY_BATTERY_COST_FACTOR = 5.0;
+	const double PENALTY_VISIT_FACTOR = 15.0;
+	const double PENALTY_BATTERY_COST_FACTOR =1.0;
 
 	// ...................... VARIABLES .............................
 
 	State current_state;
 	Action last_action;
 
+	bool precipice_limit_updated;
+
 	int reset_counter;
 	bool is_looping;
 
 	int turn_counter;
 	
-	bool continue_following_wall;
-	bool second_turn_pending;
-	bool act_forward_pending;
-
-	bool battery_charged;
+	bool following_wall;
 
 	////// debug
 	int counter = 0;
@@ -127,6 +124,7 @@ private:
 	vector<MapCell> vision;
 	vector<vector<MapCell>> local_area;
 	vector<pair<int, int>> position_history;
+	vector<pair<int, int>> position_doors;
 
 	// ...................... FUNCIONES .............................
 
@@ -150,6 +148,7 @@ private:
 	void updatePosition(MapCell &cell, int row, int col);
 	void updateBatteryCost(MapCell &cell);
 	void updatePotential(MapCell &cell, const Sensores &sensors);
+	void updatePrecipiceLimitPotential();
 
 	void updateMapWithVision(const Sensores &sensors, bool update_mapaResultado = false);
 	void updateMap(const Sensores &sensors);
@@ -160,7 +159,7 @@ private:
 	void applyOffset(vector<vector<MapCell>> &original_map, int row_offset, int col_offset);
 	//____________________
 
-	int targetInVision();
+	int positionTarget();
 	void goToTarget();
 	
 	vector<vector<MapCell>> getLocalArea(int size);
@@ -169,7 +168,7 @@ private:
 	bool isLooping();
 
 	Action followPotential();
-	Action followRightWall();
+	Action followWall();
 	Action move();
 	Action betterPotentialVision();
 

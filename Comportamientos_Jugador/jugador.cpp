@@ -25,19 +25,18 @@ Action ComportamientoJugador::think(Sensores sensors)
 	////////////////////////////////////////////////////////////////////////
 	// DEBUG															  //
 	////////////////////////////////////////////////////////////////////////
-	debug(true);
-	// action = actFORWARD;
+	debug(false);
 
 	return action;
 }
 
 void ComportamientoJugador::initPrecipiceLimit()
 {
-	const int TAM_PRECIP = 3;
+	const int PRECIPICE_SIZE = 3;
 
 	for (int i = 0; i < mapaResultado.size(); i++)
 	{
-		for (int j = 0; j < TAM_PRECIP; j++)
+		for (int j = 0; j < PRECIPICE_SIZE; j++)
 		{
 			mapaResultado[i][j] = 'P';
 			mapaResultado[j][i] = 'P';
@@ -96,6 +95,11 @@ void ComportamientoJugador::updateState(const Sensores &sensors)
 			current_state = {sensors.posF, sensors.posC, sensors.sentido, true, false, false};
 
 		initMap(map);
+		position_history.clear();
+
+		is_looping = false;
+		following_wall = false;
+
 		reset_counter++;
 		last_action = actIDLE;
 	}
@@ -231,8 +235,8 @@ void ComportamientoJugador::updatePotential(MapCell &cell, const Sensores &senso
 		attraction = ATTRACTION_TARGET_CELL;
 	else
 	{
-		double visit_penalty = log(1 + cell.times_visited) * PENALTY_VISIT_FACTOR;
-		double battery_cost_penalty = (worstBatteryCost(cell.battery_cost)) * PENALTY_BATTERY_COST_FACTOR;
+		double visit_penalty = cell.times_visited * PENALTY_VISIT_FACTOR;
+		double battery_cost_penalty = worstBatteryCost(cell.battery_cost) * PENALTY_BATTERY_COST_FACTOR;
 
 		if (cell.times_visited > 0)
 			attraction -= visit_penalty;
@@ -244,20 +248,45 @@ void ComportamientoJugador::updatePotential(MapCell &cell, const Sensores &senso
 	cell.potential = round(attraction);
 }
 
-int ComportamientoJugador::targetInVision(){
+void ComportamientoJugador::updatePrecipiceLimitPotential()
+{
+	if (current_state.well_situated)
+	{
+		const int PRECIPICE_LIMIT_SIZE = 5;
+		for (int i = 0; i < mapaResultado.size(); i++)
+		{
+			for (int j = 0; j < PRECIPICE_LIMIT_SIZE; j++)
+			{
+				map[i][j].potential -= PENALTY_PRECIPICE_LIMIT;
+				map[j][i].potential -= PENALTY_PRECIPICE_LIMIT;
+				map[i][mapaResultado.size() - j - 1].potential -= PENALTY_PRECIPICE_LIMIT;
+				map[mapaResultado.size() - j - 1][i].potential -= PENALTY_PRECIPICE_LIMIT;
+			}
+		}
+	}
+}
+
+int ComportamientoJugador::positionTarget()
+{
 	int target = -1;
-	
-	if(!current_state.has_bikini){
-		for(int i=0; i < vision.size(); i++){
-			if(vision[i].terrain_type == 'K'){
+
+	if (!current_state.has_bikini)
+	{
+		for (int i = 0; i < vision.size(); i++)
+		{
+			if (vision[i].terrain_type == 'K')
+			{
 				target = i;
 				break;
 			}
 		}
 	}
-	else if(!current_state.has_sneakers){
-		for(int i=0; i < vision.size(); i++){
-			if(vision[i].terrain_type == 'D'){
+	else if (!current_state.has_sneakers)
+	{
+		for (int i = 0; i < vision.size(); i++)
+		{
+			if (vision[i].terrain_type == 'D')
+			{
 				target = i;
 				break;
 			}
@@ -266,20 +295,21 @@ int ComportamientoJugador::targetInVision(){
 	return target;
 }
 
-void ComportamientoJugador::goToTarget(){
-	int pos_target = targetInVision();
-	
-	if(pos_target > 3){
-		bool target_in_front = (pos_target == 5 || pos_target == 6 || pos_target == 7
-							|| pos_target == 11 || pos_target == 12 || pos_target == 13);		
+void ComportamientoJugador::goToTarget()
+{
+	int pos_target = positionTarget();
+
+	if (pos_target > 3)
+	{
+		bool target_in_front = (pos_target == 5 || pos_target == 6 || pos_target == 7 || pos_target == 11 || pos_target == 12 || pos_target == 13);
 		bool target_in_left = (pos_target == 4 || pos_target == 9 || pos_target == 10);
 		bool target_in_right = (pos_target == 8 || pos_target == 14 || pos_target == 15);
 
-		if(target_in_front)
+		if (target_in_front)
 			vision[2].potential += ATTRACTION_TARGET;
-		else if(target_in_left)
+		else if (target_in_left)
 			vision[1].potential += ATTRACTION_TARGET;
-		else if(target_in_right)
+		else if (target_in_right)
 			vision[3].potential += ATTRACTION_TARGET;
 	}
 }
@@ -290,25 +320,37 @@ Action ComportamientoJugador::move()
 
 	is_looping = isLooping();
 
-	if(is_looping){
+	if (is_looping)
+	{
 		action = betterPotentialVision();
 
-		if(action == actFORWARD)
+		if (action == actFORWARD)
 			is_looping = false;
 	}
-	else{
-		if(targetInVision() > 3)
-			goToTarget();
-		// if (wallDetected())
-		// 	action = followRightWall();
-		// else
+	else
+	{
+		bool in_door = false;
+
+		for (pair<int, int> p : position_doors)
+			if (current_state.row == p.first && current_state.col == p.second)
+				in_door = true;
+
+		// Comprueba si tiene que seguir un muro
+		if (!in_door)
+			action = followWall();
+		if (!following_wall)
+		{
+			if (positionTarget() > 3)
+				goToTarget();
+
 			action = followPotential();
-			// action = actTURN_SL;
+		}
 	}
 	return action;
 }
 
-Action ComportamientoJugador::betterPotentialVision(){
+Action ComportamientoJugador::betterPotentialVision()
+{
 	Action action = actIDLE;
 
 	double current_potential = vision[0].potential;
@@ -318,7 +360,8 @@ Action ComportamientoJugador::betterPotentialVision(){
 
 	if (vision[1].potential == PENALTY_WALL_PRECIPICE && vision[2].potential == PENALTY_WALL_PRECIPICE && vision[3].potential == PENALTY_WALL_PRECIPICE)
 		action = actTURN_BL;
-	else{
+	else
+	{
 		if (right_potential > front_potential && right_potential >= left_potential && right_potential >= current_potential)
 			action = actTURN_SR;
 		else if (front_potential >= right_potential && front_potential >= left_potential && front_potential >= current_potential)
@@ -327,22 +370,24 @@ Action ComportamientoJugador::betterPotentialVision(){
 			action = actTURN_SL;
 		else
 			action = actTURN_BL;
-
 	}
 	return action;
 }
 
-double ComportamientoJugador::potentialAverage(const vector<MapCell> &cells){
+double ComportamientoJugador::potentialAverage(const vector<MapCell> &cells)
+{
 	double average = 0;
-	for(int i = 0; i < cells.size(); i++){
+	for (int i = 0; i < cells.size(); i++)
+	{
 		average += cells[i].potential;
 	}
 	return average / cells.size();
 }
 
-vector<MapCell> ComportamientoJugador::getLeftSideVision(){
+vector<MapCell> ComportamientoJugador::getLeftSideVision()
+{
 	vector<MapCell> left_side_vision;
-	
+
 	left_side_vision.push_back(vision[1]);
 	left_side_vision.push_back(vision[4]);
 	left_side_vision.push_back(vision[5]);
@@ -353,9 +398,10 @@ vector<MapCell> ComportamientoJugador::getLeftSideVision(){
 	return left_side_vision;
 }
 
-vector<MapCell> ComportamientoJugador::getRightSideVision(){
+vector<MapCell> ComportamientoJugador::getRightSideVision()
+{
 	vector<MapCell> right_side_vision;
-	
+
 	right_side_vision.push_back(vision[3]);
 	right_side_vision.push_back(vision[7]);
 	right_side_vision.push_back(vision[8]);
@@ -366,9 +412,10 @@ vector<MapCell> ComportamientoJugador::getRightSideVision(){
 	return right_side_vision;
 }
 
-vector<MapCell> ComportamientoJugador::getFrontSideVision(){
+vector<MapCell> ComportamientoJugador::getFrontSideVision()
+{
 	vector<MapCell> front_side_vision;
-	
+
 	front_side_vision.push_back(vision[2]);
 	front_side_vision.push_back(vision[6]);
 	front_side_vision.push_back(vision[12]);
@@ -402,80 +449,52 @@ Action ComportamientoJugador::followPotential()
 	return action;
 }
 
-// Action ComportamientoJugador::followRightWall()
-// {
-// 	Action action = actIDLE;
+Action ComportamientoJugador::followWall()
+{
+	Action action = actIDLE;
 
-// 	bool wall_left = vision[1].terrain_type == 'M';
-// 	bool wall_front = vision[2].terrain_type == 'M';
-// 	bool wall_right = vision[3].terrain_type == 'M';
+	bool wall_left = vision[1].terrain_type == 'M';
+	bool wall_front = vision[2].terrain_type == 'M';
+	bool wall_right = vision[3].terrain_type == 'M';
 
-// 	bool wall_front_left = wall_front && wall_left;
-// 	bool wall_front_right = wall_front && wall_right;
-// 	bool wall_left_right = wall_left && wall_right;
-// 	bool wall_left_front_right = wall_left && wall_front && wall_right;
+	bool wall_front_left = wall_front && wall_left;
+	bool wall_front_right = wall_front && wall_right;
+	bool wall_left_right = wall_left && wall_right;
+	bool wall_left_front_right = wall_left && wall_front && wall_right;
 
-// 	bool orientation_NSEW = static_cast<Orientacion>(current_state.orientation % 2 == 0);
+	bool pending_turn = false;
 
-// 	if(continue_following_wall){}
-// 	if (second_turn_pending)
-// 	{
-// 		if (last_action == actTURN_SL)
-// 			action = actTURN_SL;
-// 		else
-// 			action = actTURN_SR;
+	if (wallDetected())
+	{
+		following_wall = true;
 
-// 		second_turn_pending = false;
-// 	}else{
-// 		if(wall_left_front_right){
-// 			action = actTURN_SL;
-// 			second_turn_pending = true;
-// 		}
-// 		else if(wall_)
-// 		else if (wall_front_right){
-// 			action = actTURN_SL;
-// 			second_turn_pending = true;
-// 		}
+		if (wall_left_front_right)
+		{
+			action = actTURN_SL;
+			pending_turn = true;
+		}
+		else if (wall_front_right)
+		{
+			action = actTURN_SL;
+		}
+		else if (wall_front_left)
+		{
+			action = actTURN_SR;
+		}
+		else if (wall_front)
+		{
+			action = actTURN_SL;
+		}
+		else if (!pending_turn && (wall_left || wall_right))
+		{
+			if (vision[2].potential > MAX_PENALTY)
+				vision[2].potential = ATTRACTION_UNVISITED_CELL + ATTRACTION_TARGET - 10;
 
-// 	// else
-// 	// {
-// 	// 	if (orientation_NSEW)
-// 	// 	{
-// 	// 		if (wall_left_front_right)
-// 	// 		{
-// 	// 			action = actTURN_SL;
-// 	// 			second_turn_pending = true;
-// 	// 		}
-// 	// 		else if (wall_front_right)
-// 	// 			action = actTURN_SL;
-// 	// 		else if (wall_front && !wall_right)
-// 	// 			action = actTURN_SR;
-// 	// 		else if (wall_right)
-// 	// 		{
-// 	// 			action = actTURN_SL;
-// 	// 			second_turn_pending = true;
-// 	// 		}
-// 	// 		else
-// 	// 			action = actFORWARD;
-// 	// 	}
-// 	// 	else
-// 	// 	{
-// 	// 		if (wall_front_left)
-// 	// 			action = actTURN_SR;
-// 	// 		else if (wall_front && !wall_left)
-// 	// 			action = actTURN_SL;
-// 	// 		else if (wall_left)
-// 	// 		{
-// 	// 			action = actTURN_SR;
-// 	// 			second_turn_pending = true;
-// 	// 		}
-// 	// 		else
-// 	// 			action = actFORWARD;
-// 	// 	}
-// 	// }
-
-// 	return action;
-// }
+			following_wall = false;
+		}
+	}
+	return action;
+}
 
 bool ComportamientoJugador::wallDetected()
 {
@@ -494,11 +513,11 @@ void ComportamientoJugador::updateMapWithVision(const Sensores &sensors, bool up
 	int col = current_state.col;
 	int index = 0;
 
-	// Actualiza el mapa terreno
-	updateTerrain(map[row][col], sensors.terreno[index]);
-	
 	if (update_mapaResultado && mapaResultado[row][col] == '?')
 		mapaResultado[row][col] = sensors.terreno[index];
+
+	// Actualiza el mapa terreno
+	updateTerrain(map[row][col], sensors.terreno[index]);
 
 	// Actualiza la posicion actual
 	updatePosition(map[row][col], row, col);
@@ -529,9 +548,8 @@ void ComportamientoJugador::updateMapWithVision(const Sensores &sensors, bool up
 				{
 					if (update_mapaResultado && mapaResultado[row][col] == '?')
 						mapaResultado[row][col] = sensors.terreno[index];
-					else
-						updateTerrain(map[row][col], sensors.terreno[index]);
 
+					updateTerrain(map[row][col], sensors.terreno[index]);
 					updatePosition(map[row][col], row, col);
 					updateEntity(map[row][col], sensors.superficie[index]);
 
@@ -748,21 +766,33 @@ void ComportamientoJugador::updateMapWithVision(const Sensores &sensors, bool up
 		break;
 	}
 
-	// Obtenemos el area local del agente de dimension 5x5
-	local_area = getLocalArea(2);
-
 	// Actualizar el vector de celdas del campo de vision
 	vision = cells;
 
+	// Actualizamos la posicion de las puertas
+	if (vision[1].terrain_type == 'M' && vision[5].terrain_type != 'M' && vision[11].terrain_type == 'M')
+		position_doors.push_back(vision[5].position);
+	if (vision[3].terrain_type == 'M' && vision[7].terrain_type != 'M' && vision[13].terrain_type == 'M')
+		position_doors.push_back(vision[7].position);
+
 	updateMap(sensors);
 	updateVision(sensors);
+
+	// Obtenemos el area local del  agente de dimension 5x5
+	local_area = getLocalArea(3);
 }
 
 void ComportamientoJugador::updateVision(const Sensores &sensors)
 {
-	for (int i=0; i < vision.size(); ++i){
+	for (int i = 0; i < vision.size(); ++i)
+	{
 		updateBatteryCost(vision[i]);
 		updatePotential(vision[i], sensors);
+
+		if (i > 0)
+			for (pair<int, int> p : position_doors)
+				if (p == vision[i].position && vision[i].potential > MAX_PENALTY)
+					vision[i].potential = ATTRACTION_UNVISITED_CELL + ATTRACTION_TARGET;
 	}
 }
 
@@ -777,6 +807,12 @@ void ComportamientoJugador::updateMap(const Sensores &sensors)
 			updatePotential(map[i][j], sensors);
 		}
 	}
+
+	// if (current_state.well_situated && !precipice_limit_updated)
+	// {
+	// 	updatePrecipiceLimitPotential();
+	// 	precipice_limit_updated = true;
+	// }
 }
 
 void ComportamientoJugador::updateResultMap(int row_offset, int col_offset, Orientacion orientation)
@@ -1203,12 +1239,12 @@ void ComportamientoJugador::debug(bool debug, bool mapa)
 					max_width += 7;
 
 					stringstream cell_content;
-					if (i == 2 && j == 2)
+					if (i == 3 && j == 3)
 						cell_content << "{";
 					else
 						cell_content << "[";
 					cell_content << local_area[i][j].terrain_type << "," << local_area[i][j].potential;
-					if (i == 2 && j == 2)
+					if (i == 3 && j == 3)
 						cell_content << "}";
 					else
 						cell_content << "]";
