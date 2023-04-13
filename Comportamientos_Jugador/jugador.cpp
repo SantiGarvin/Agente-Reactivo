@@ -807,141 +807,135 @@ void ComportamientoJugador::updateMap(const Sensores &sensors)
 			updatePotential(map[i][j], sensors);
 		}
 	}
-
-	// if (current_state.well_situated && !precipice_limit_updated)
-	// {
-	// 	updatePrecipiceLimitPotential();
-	// 	precipice_limit_updated = true;
-	// }
 }
 
-void ComportamientoJugador::updateResultMap(int row_offset, int col_offset, Orientacion orientation)
-{
-	// int size = map.size();
+// void ComportamientoJugador::updateResultMap(int row_offset, int col_offset, Orientacion orientation)
+// {
+// 	// int size = map.size();
 
-	// for (int i = 0; i < size; ++i)
-	// {
-	// 	for (int j = 0; j < size; ++j)
-	// 	{
-	// 		int new_row = i;
-	// 		int new_col = j;
+// 	// for (int i = 0; i < size; ++i)
+// 	// {
+// 	// 	for (int j = 0; j < size; ++j)
+// 	// 	{
+// 	// 		int new_row = i;
+// 	// 		int new_col = j;
 
-	// 		switch (orientation)
-	// 		{
-	// 		case 0: // Norte
-	// 			new_row = i - row_offset;
-	// 			new_col = j - col_offset;
-	// 			break;
-	// 		case 1: // Noreste
-	// 			new_row = i - row_offset + col_offset;
-	// 			new_col = j - col_offset - row_offset;
-	// 			break;
-	// 		case 2: // Este
-	// 			new_row = i + col_offset;
-	// 			new_col = j - row_offset;
-	// 			break;
-	// 		case 3: // Sureste
-	// 			new_row = i + row_offset + col_offset;
-	// 			new_col = j - col_offset + row_offset;
-	// 			break;
-	// 		case 4: // Sur
-	// 			new_row = i + row_offset;
-	// 			new_col = j + col_offset;
-	// 			break;
-	// 		case 5: // Suroeste
-	// 			new_row = i + row_offset - col_offset;
-	// 			new_col = j + col_offset + row_offset;
-	// 			break;
-	// 		case 6: // Oeste
-	// 			new_row = i - col_offset;
-	// 			new_col = j + row_offset;
-	// 			break;
-	// 		case 7: // Noroeste
-	// 			new_row = i - row_offset - col_offset;
-	// 			new_col = j + col_offset - row_offset;
-	// 			break;
-	// 		default:
-	// 			new_row = i;
-	// 			new_col = j;
-	// 			break;
-	// 		}
+// 	// 		switch (orientation)
+// 	// 		{
+// 	// 		case 0: // Norte
+// 	// 			new_row = i - row_offset;
+// 	// 			new_col = j - col_offset;
+// 	// 			break;
+// 	// 		case 1: // Noreste
+// 	// 			new_row = i - row_offset + col_offset;
+// 	// 			new_col = j - col_offset - row_offset;
+// 	// 			break;
+// 	// 		case 2: // Este
+// 	// 			new_row = i + col_offset;
+// 	// 			new_col = j - row_offset;
+// 	// 			break;
+// 	// 		case 3: // Sureste
+// 	// 			new_row = i + row_offset + col_offset;
+// 	// 			new_col = j - col_offset + row_offset;
+// 	// 			break;
+// 	// 		case 4: // Sur
+// 	// 			new_row = i + row_offset;
+// 	// 			new_col = j + col_offset;
+// 	// 			break;
+// 	// 		case 5: // Suroeste
+// 	// 			new_row = i + row_offset - col_offset;
+// 	// 			new_col = j + col_offset + row_offset;
+// 	// 			break;
+// 	// 		case 6: // Oeste
+// 	// 			new_row = i - col_offset;
+// 	// 			new_col = j + row_offset;
+// 	// 			break;
+// 	// 		case 7: // Noroeste
+// 	// 			new_row = i - row_offset - col_offset;
+// 	// 			new_col = j + col_offset - row_offset;
+// 	// 			break;
+// 	// 		default:
+// 	// 			new_row = i;
+// 	// 			new_col = j;
+// 	// 			break;
+// 	// 		}
 
-	// 		if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
-	// 		{
-	// 			mapaResultado[new_row][new_col] = map[i][j].terrain_type;
-	// 		}
-	// 	}
-	// }
-	int aux_rows = map.size();
-	int aux_cols = map[0].size();
+// 	// 		if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
+// 	// 		{
+// 	// 			mapaResultado[new_row][new_col] = map[i][j].terrain_type;
+// 	// 		}
+// 	// 	}
+// 	// }
+// 	int aux_rows = map.size();
+// 	int aux_cols = map[0].size();
 
-	for (int i = 0; i < aux_rows; ++i)
-	{
-		for (int j = 0; j < aux_cols; ++j)
-		{
-			// Calcular las coordenadas en el mapa resultado
-			int result_row, result_col;
+// 	for (int i = 0; i < aux_rows; ++i)
+// 	{
+// 		for (int j = 0; j < aux_cols; ++j)
+// 		{
+// 			// Calcular las coordenadas en el mapa resultado
+// 			int result_row, result_col;
 
-			switch (current_state.orientation)
-			{
-			case 0: // Norte
-				result_row = current_state.row - i;
-				result_col = current_state.col - j;
-				break;
-			case 1: // Noreste
-				// Tu lógica aquí
-				break;
-			case 2: // Este
-				result_row = current_state.row + j;
-				result_col = current_state.col - i;
-				break;
-			case 3: // Sureste
-				// Tu lógica aquí
-				break;
-			case 4: // Sur
-				result_row = current_state.row + i;
-				result_col = current_state.col + j;
-				break;
-			case 5: // Suroeste
-				// Tu lógica aquí
-				break;
-			case 6: // Oeste
-				result_row = current_state.row - j;
-				result_col = current_state.col + i;
-				break;
-			case 7: // Noroeste
-				// Tu lógica aquí
-				break;
-			}
+// 			switch (current_state.orientation)
+// 			{
+// 			case 0: // Norte
+// 				result_row = current_state.row - i;
+// 				result_col = current_state.col - j;
+// 				break;
+// 			case 1: // Noreste
+// 				// Tu lógica aquí
+// 				break;
+// 			case 2: // Este
+// 				result_row = current_state.row + j;
+// 				result_col = current_state.col - i;
+// 				break;
+// 			case 3: // Sureste
+// 				// Tu lógica aquí
+// 				break;
+// 			case 4: // Sur
+// 				result_row = current_state.row + i;
+// 				result_col = current_state.col + j;
+// 				break;
+// 			case 5: // Suroeste
+// 				// Tu lógica aquí
+// 				break;
+// 			case 6: // Oeste
+// 				result_row = current_state.row - j;
+// 				result_col = current_state.col + i;
+// 				break;
+// 			case 7: // Noroeste
+// 				// Tu lógica aquí
+// 				break;
+// 			}
 
-			// Verificar si las coordenadas están dentro del mapa resultado
-			if (result_row >= 0 && result_row < mapaResultado.size() && result_col >= 0 && result_col < mapaResultado[0].size())
-			{
-				// Copiar el contenido de la celda en el mapa auxiliar a la celda correspondiente en el mapa resultado
-				mapaResultado[result_row][result_col] = map[i][j].terrain_type;
-			}
-		}
-	}
-}
+// 			// Verificar si las coordenadas están dentro del mapa resultado
+// 			if (result_row >= 0 && result_row < mapaResultado.size() && result_col >= 0 && result_col < mapaResultado[0].size())
+// 			{
+// 				// Copiar el contenido de la celda en el mapa auxiliar a la celda correspondiente en el mapa resultado
+// 				mapaResultado[result_row][result_col] = map[i][j].terrain_type;
+// 			}
+// 		}
+// 	}
+// }
 
-void ComportamientoJugador::applyOffset(vector<vector<MapCell>> &_map, int row_offset, int col_offset)
-{
-	int size = _map.size() / 2;
+// void ComportamientoJugador::applyOffset(vector<vector<MapCell>> &_map, int row_offset, int col_offset)
+// {
+// 	int size = _map.size() / 2;
 
-	for (int i = 0; i < size; ++i)
-	{
-		int new_row = i + row_offset;
-		for (int j = 0; j < size; ++j)
-		{
-			int new_col = j + col_offset;
-			if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
-			{
-				if (mapaResultado[i][j] == '?' && mapaResultado[i][j] != 'P')
-					mapaResultado[i][j] = _map[new_row][new_col].terrain_type;
-			}
-		}
-	}
-}
+// 	for (int i = 0; i < size; ++i)
+// 	{
+// 		int new_row = i + row_offset;
+// 		for (int j = 0; j < size; ++j)
+// 		{
+// 			int new_col = j + col_offset;
+// 			if (new_row >= 0 && new_row < size && new_col >= 0 && new_col < size)
+// 			{
+// 				if (mapaResultado[i][j] == '?' && mapaResultado[i][j] != 'P')
+// 					mapaResultado[i][j] = _map[new_row][new_col].terrain_type;
+// 			}
+// 		}
+// 	}
+// }
 
 vector<vector<MapCell>> ComportamientoJugador::getLocalArea(int size)
 {

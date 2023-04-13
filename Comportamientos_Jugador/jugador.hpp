@@ -155,8 +155,8 @@ private:
 	void updateVision(const Sensores &sensors);
 	
 	//____________________
-	void updateResultMap(int row_offset, int col_offset, Orientacion orientation);
-	void applyOffset(vector<vector<MapCell>> &original_map, int row_offset, int col_offset);
+	// void updateResultMap(int row_offset, int col_offset, Orientacion orientation);
+	// void applyOffset(vector<vector<MapCell>> &original_map, int row_offset, int col_offset);
 	//____________________
 
 	int positionTarget();
